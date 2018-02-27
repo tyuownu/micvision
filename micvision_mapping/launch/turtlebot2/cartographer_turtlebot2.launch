@@ -1,6 +1,6 @@
 <launch>
   <master auto="start" />
-  <include file="$(find micvision_sim)/move_base_config/move_base.xml" />
+  <include file="$(find micvision_sim)/move_base_config/move_base_turtlebot2.xml" />
   <node name="cartographer_node" pkg="cartographer_ros" type="cartographer_node" args="
     -configuration_directory $(find cartographer_ros)/configuration_files
     -configuration_basename turtlebot2_2d.lua " output="screen" ></node>
