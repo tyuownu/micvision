@@ -1,0 +1,27 @@
+#Independent settings for the global planner's costmap. Detailed descriptions of these parameters can be found at http://www.ros.org/wiki/costmap_2d
+
+global_costmap:
+  #Set the global and robot frames for the costmap
+  global_frame: /map
+  robot_base_frame: base_link
+  publish_voxel_map: true
+
+  #Set the update and publish frequency of the costmap
+  update_frequency: 5.0
+  publish_frequency: 2.0
+
+  #We'll use a map served by the map_server to initialize this costmap
+  static_map: true
+  rolling_window: false
+  track_unknown_space: true
+  # control the default_value of costmap
+  # true: NO_INFORMATION, false: FREE_SPACE(default)
+  always_send_full_costmap: true
+  lethal_cost_threshold: 80
+
+  footprint_padding: 0.02
+
+  #plugins:
+  #    - {name: static_map,       type: "costmap_2d::StaticLayer"}
+  #    - {name: obstacles,        type: "costmap_2d::VoxelLayer"}
+  #    - {name: inflation_layer,  type: "costmap_2d::InflationLayer"}

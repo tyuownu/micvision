@@ -1,0 +1,64 @@
+include "turtlebot3.inc"
+include "floorplan.inc"
+
+define floorplan model
+(
+  # sombre, sensible, artistic
+  color "gray30"
+
+  # most maps will need a bounding box
+  boundary 1
+
+  gui_nose 0
+  gui_grid 0
+  gui_outline 0
+  gripper_return 0
+  fiducial_return 0
+  laser_return 1
+)
+
+resolution 0.02
+interval_sim 100  # simulation timestep in milliseconds
+
+window
+(
+  size [ 1855 1056 ]
+  center [ 2.471 1.412 ]
+  rotate [ 0.000 0.000 ]
+  scale 40.981
+)
+
+floorplan
+(
+  name "maze"
+  bitmap "maze.png"
+  size [ 12.000 12.000 2.000 ]
+  pose [  0.000  0.000 0.000 0.000 ]
+)
+
+# throw in a robot
+turtlebot3
+(
+  name "robot"
+  pose [ -1.000 -1.000 0.000 0.000 ]
+)
+define block model
+(
+  size [0.500 0.500 2.000]
+  gui_nose 0
+)
+
+#block(pose [-6.803 -0.244 0.000 0.000] color "black")
+#block(pose [-7.027 10.073 0.000 0.000] color "black")
+#block(pose [-10.265 -6.124 0.000 0.000] color "black")
+#block(pose [-7.459 2.148 0.000 0.000] color "black")
+#block(pose [1.618 -8.077 0.000 0.000] color "black")
+#block(pose [10.037 -9.711 0.000 0.000] color "black")
+#block(pose [9.500 -3.000 0.000 0.000] color "black")
+#block(pose [-1.408 7.954 0.000 0.000] color "black")
+#block(pose [5.962 10.053 0.000 0.000] color "black")
+#block(pose [-5.190 -10.542 0.000 0.000] color "black")
+#block(pose [10.061 2.061 0.000 0.000] color "black")
+#block(pose [8.280 6.551 0.000 0.000] color "black")
+#block(pose [1.131 7.186 0.000 0.000] color "black")
+#block(pose [6.133 -6.991 0.000 0.000] color "black")
