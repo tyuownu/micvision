@@ -1,0 +1,4 @@
+<launch>
+  <include file="$(find micvision_navigation)/launch/turtlebot2/hardware_turtlebot2.launch" />
+  <include file="$(find micvision_navigation)/launch/turtlebot2/move_base_amcl_turtlebot2.launch" />
+</launch>

@@ -1,0 +1,5 @@
+<launch>
+  <include file="$(find turtlebot3_bringup)/launch/turtlebot3_core.launch" />
+  <include file="$(find rplidar_ros)/launch/rplidar.launch" />
+  <include file="$(find neo_nav)/launch/turtlebot3_remote.launch" />
+</launch>
