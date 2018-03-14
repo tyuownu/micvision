@@ -6,4 +6,6 @@
   <node pkg="tf" type="static_transform_publisher" name="base_link_laser" args="0 0 0.1 0 0 0 base_link laser 100"/>
 
   <node pkg="tf" type="static_transform_publisher" name="base_link_laser_link" args="0 0 0.1 0 0 0 base_link laser_link 100"/>
+
+  <node pkg="tf" type="static_transform_publisher" name="base_link_gyro_link" args="0 0 0.1 0 0 0 base_link gryo_link 100" />
 </launch>
