@@ -2,8 +2,8 @@
 #parameters available for DWAPlannerROS, please see
 #http://www.ros.org/wiki/dwa_local_planner
 DWAPlannerROS:
-  acc_lim_theta: 1
-  acc_lim_x: 1
+  acc_lim_theta: 3
+  acc_lim_x: 3
   acc_lim_y: 0
 
   max_vel_x: 0.25
