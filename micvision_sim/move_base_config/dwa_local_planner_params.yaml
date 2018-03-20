@@ -40,7 +40,7 @@ DWAPlannerROS:
   oscillation_reset_dist: 0.05  # default: 0.05
   # how far to travel before resetting oscillation flags
 
-  forward_point_distance: 0.325 # default: 0.325
+  forward_point_distance: 0.0 # default: 0.325
 
   scaling_speed: 0.25           # 这两个都和ObstacleCostFunction相关, default: 0.25
   max_scaling_factor: 0.2

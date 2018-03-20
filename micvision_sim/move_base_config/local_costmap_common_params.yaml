@@ -24,7 +24,7 @@ raytrace_range: 3.0
 robot_radius: 0.20
 
 #Cost function parameters
-inflation_radius: 0.30
+inflation_radius: 0.50
 cost_scaling_factor: 10.0
 
 #The cost at which a cell is considered an obstacle when a map is read from the map_server
