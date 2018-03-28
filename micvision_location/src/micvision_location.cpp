@@ -6,7 +6,7 @@
 namespace micvision {
 
 inline Eigen::Vector2i floor(const Eigen::Vector3f& v) {
-  return Eigen::Vector2i(std::floor(v[0]), std::floor(v[1]));
+  return Eigen::Vector2i(std::lround(v[0]-0.5), std::lround(v[1]-0.5));
 }
 
 LaserScanSample MicvisionLocation::transformPointCloud(

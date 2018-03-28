@@ -24,7 +24,6 @@ namespace micvision {
 typedef actionlib::SimpleActionServer<micvision_location::LocationAction> LocationActionServer;
 typedef std::vector<Eigen::Vector3f> PointCloud;
 typedef std::vector<Eigen::Vector2i> PointCloudUV;
-typedef Eigen::Matrix<float, 3, 1> Vector;
 
 struct CellData {
  public:
