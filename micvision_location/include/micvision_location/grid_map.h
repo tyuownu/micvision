@@ -130,6 +130,10 @@ class GridMap {
       return occupancy_grid_.data[y*map_width_ + x];
   }
 
+  double getRawData(int x, int y) {
+    return occupancy_grid_.data[y*map_width_ + x];
+  }
+
   bool setData(int x, int y, signed char value) {
     if ( x < 0 ||x >= (int)map_width_ || y < 0 || y >= (int)map_height_ ) {
       return false;

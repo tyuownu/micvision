@@ -19,10 +19,10 @@ LaserScanSample MicvisionLocation::transformPointCloud(
   for ( const Eigen::Vector3f& point:point_cloud_ ) {
     // result.emplace_back(transform * point);
     const Eigen::Vector2i temp = floor(transform * point / resolution);
-    min_x = min_x < temp[1] ? min_x : temp[1];
-    min_y = min_y < temp[0] ? min_y : temp[0];
-    max_x = max_x > temp[1] ? max_x : temp[1];
-    max_y = max_y > temp[0] ? max_y : temp[0];
+    min_x = min_x < temp[0] ? min_x : temp[0];
+    min_y = min_y < temp[1] ? min_y : temp[1];
+    max_x = max_x > temp[0] ? max_x : temp[0];
+    max_y = max_y > temp[1] ? max_y : temp[1];
     result.emplace_back(temp);
   }
   return LaserScanSample{result, min_x, max_x, min_y, max_y};
@@ -52,7 +52,7 @@ MicvisionLocation::MicvisionLocation() {
   robot_radius_ = 0.2;
   cost_obstacle_ = 100;
 
-  has_new_map_ = false;
+  has_new_map_ = true;
   inflation_markers_ = NULL;
   cached_distances_ = NULL;
   cached_costs_ = NULL;
@@ -82,6 +82,7 @@ void MicvisionLocation::scanCallback(const sensor_msgs::LaserScan& scan) {
   // ROS_INFO("scanCallback, scan size: %d", scan.ranges.size());
 
   if ( ros::ok() && update_laserscan_ ) {
+    point_cloud_.clear();
     update_laserscan_ = false;
     // generate the point_cloud_
     float angle = scan.angle_min;
@@ -137,7 +138,6 @@ void MicvisionLocation::scoreLaserScanSamples() {
         if ( v + temp.min_x <= 1 ||
             v + temp.max_x >= current_map_.getWidth() )
           continue;
-        ROS_INFO("score the sample");
         count++;
         double temp_score = scoreASample(temp, u, v);
         // ROS_INFO("angle: %f, position: (%d, %d), score: %f", sample.first, u, v, temp_score);
@@ -159,16 +159,20 @@ double MicvisionLocation::scoreASample(const LaserScanSample& sample,
   for ( auto s:sample.point_cloud ) {
     // ROS_INFO("(%d, %d)+(%d, %d)value: %d",s[0],s[1],v,u, current_map_.getData(s[0]+v, s[1]+u));
     // s = [width, height, z]
-    score += static_cast<double>(current_map_.getData(s[0]+v, s[1]+u));
+    score += current_map_.getRawData(s[0]+v, s[1]+u);
   }
+  // ROS_INFO("score: %f", score);
   return score;
 }
 
 void MicvisionLocation::receiveLocationGoal(
     const micvision_location::LocationGoal::ConstPtr &goal) {
 
-  if ( !getMap() )
+  update_laserscan_ = true;
+  if ( !getMap() ) {
     ROS_WARN("Could not get a new map, trying to go with the old one...");
+    return;
+  }
 
   inflateMap();
 
@@ -184,12 +188,12 @@ void MicvisionLocation::receiveLocationGoal(
    *}
    *fclose(fp);
    */
-  update_laserscan_ = true;
 }
 
 bool MicvisionLocation::getMap() {
-  if ( has_new_map_ )
-    return true;
+  // new map comming?
+  if ( !has_new_map_ )
+    return false;
 
   if ( !get_map_client_.isValid() ) {
     ROS_ERROR("get map client is invalid!");
@@ -207,7 +211,7 @@ bool MicvisionLocation::getMap() {
   cell_inflation_radius_ = inflation_radius_ / current_map_.getResolution();
   computeCaches();
 
-  has_new_map_ = true;
+  has_new_map_ = false;
   return true;
 }
 
