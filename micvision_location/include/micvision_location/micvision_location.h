@@ -13,9 +13,18 @@
 #include <micvision_location/grid_map.h>
 
 #include <queue>
+#include <vector>
+
+#include <Eigen/Core>
+#include <Eigen/Geometry>
+
+const double PI_2 = 2*M_PI;
 
 namespace micvision {
 typedef actionlib::SimpleActionServer<micvision_location::LocationAction> LocationActionServer;
+typedef std::vector<Eigen::Vector3f> PointCloud;
+typedef std::vector<Eigen::Vector2i> PointCloudUV;
+typedef Eigen::Matrix<float, 3, 1> Vector;
 
 struct CellData {
  public:
@@ -27,6 +36,13 @@ struct CellData {
   friend bool operator<(const CellData &c1, const CellData &c2) {
     return c1.distance > c2.distance;
   }
+};
+
+
+struct LaserScanSample {
+  PointCloudUV point_cloud;
+  int min_x, max_x;
+  int min_y, max_y;
 };
 
 class MicvisionLocation {
@@ -43,19 +59,52 @@ class MicvisionLocation {
     // Inflation radius relative
     void computeCaches();
     void inflateMap();
-    void enqueueObstacle(unsigned int index, unsigned int x, unsigned int y);
-    inline double distanceLookup(unsigned int mx, unsigned int my,
-                                 unsigned int sx, unsigned int sy);
-    inline signed char costLookup(unsigned int mx, unsigned int my,
-                                  unsigned int sx, unsigned int sy);
+
+    LaserScanSample transformPointCloud(const Eigen::Quaternionf& transform);
+    void scoreLaserScanSamples();
+    double scoreASample(const LaserScanSample& sample,
+                        const int x, const int y);
+
 
  private:
+    // private function
+    void handleLaserScan();
+
+    inline double distanceLookup(const unsigned int mx,
+                                 const unsigned int my,
+                                 const unsigned int sx,
+                                 const unsigned int sy);
+
+    inline signed char costLookup(const unsigned int mx,
+                                  const unsigned int my,
+                                  const unsigned int sx,
+                                  const unsigned int sy);
+
+    void enqueueObstacle(const unsigned int index,
+                         const unsigned int x,
+                         const unsigned int y);
+
     bool has_new_map_;
     double inflation_radius_;
     double robot_radius_;
     signed char cost_obstacle_;
 
+    // laserscan relative
+    bool update_laserscan_;
+    PointCloud point_cloud_;
+
+    int laserscan_circle_step_;
+    int range_step_;   // unit: resolution
+    double laserscan_anglar_step_;
+
     unsigned int cell_inflation_radius_;
+    std::vector<std::pair<double, LaserScanSample> > laserscan_samples_;
+    // min and max valid distance for laserscan
+    double min_valid_range_, max_valid_range_;
+
+    // best result
+    double best_angle_;
+    Eigen::Vector2i best_position_;
 
     GridMap current_map_;
 

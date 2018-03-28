@@ -4,6 +4,30 @@
 #include <string.h>
 
 namespace micvision {
+
+inline Eigen::Vector2i floor(const Eigen::Vector3f& v) {
+  return Eigen::Vector2i(std::floor(v[0]), std::floor(v[1]));
+}
+
+LaserScanSample MicvisionLocation::transformPointCloud(
+    const Eigen::Quaternionf& transform) {
+  PointCloudUV result;
+  result.reserve(point_cloud_.size());
+  const float resolution = current_map_.getResolution();
+  int min_x = current_map_.getWidth(), max_x = -min_x;
+  int min_y = current_map_.getHeight(), max_y = -min_y;
+  for ( const Eigen::Vector3f& point:point_cloud_ ) {
+    // result.emplace_back(transform * point);
+    const Eigen::Vector2i temp = floor(transform * point / resolution);
+    min_x = min_x < temp[1] ? min_x : temp[1];
+    min_y = min_y < temp[0] ? min_y : temp[0];
+    max_x = max_x > temp[1] ? max_x : temp[1];
+    max_y = max_y > temp[0] ? max_y : temp[0];
+    result.emplace_back(temp);
+  }
+  return LaserScanSample{result, min_x, max_x, min_y, max_y};
+}
+
 MicvisionLocation::MicvisionLocation() {
   ros::NodeHandle nh;
 
@@ -32,6 +56,15 @@ MicvisionLocation::MicvisionLocation() {
   inflation_markers_ = NULL;
   cached_distances_ = NULL;
   cached_costs_ = NULL;
+
+  // laserscan relative
+  update_laserscan_ = false;
+  laserscan_circle_step_ = 4;
+  range_step_ = 3;
+  laserscan_anglar_step_ = 4.0*M_PI/180;  // double
+
+  min_valid_range_ = 0.0;
+  max_valid_range_ = 10.0;
 }
 
 MicvisionLocation::~MicvisionLocation() {
@@ -46,7 +79,89 @@ void MicvisionLocation::mapCallback(const nav_msgs::OccupancyGrid& map) {
 }
 
 void MicvisionLocation::scanCallback(const sensor_msgs::LaserScan& scan) {
-  ROS_DEBUG("scanCallback");
+  // ROS_INFO("scanCallback, scan size: %d", scan.ranges.size());
+
+  if ( ros::ok() && update_laserscan_ ) {
+    update_laserscan_ = false;
+    // generate the point_cloud_
+    float angle = scan.angle_min;
+    for ( int i = 0; i < scan.ranges.size(); i += laserscan_circle_step_ ) {
+      const float range = scan.ranges[i];
+      if ( min_valid_range_ <= range && range <= max_valid_range_ ) {
+        const Eigen::AngleAxisf rotation(angle, Eigen::Vector3f::UnitZ());
+        point_cloud_.push_back(rotation*( range*Eigen::Vector3f::UnitX() ));
+        // ROS_INFO_STREAM("range: " << range << ", points: " << (rotation*(range*Eigen::Vector3f::UnitX())).transpose());
+      }
+      // ROS_INFO_STREAM("ange: " << range);
+
+      angle += scan.angle_increment * laserscan_circle_step_;
+    }
+
+    handleLaserScan();
+
+  }
+}
+
+void MicvisionLocation::handleLaserScan() {
+  laserscan_samples_.clear();
+  double angle = 0;
+  laserscan_samples_.reserve(static_cast<int>(PI_2/laserscan_anglar_step_));
+  while ( angle < PI_2 ) {
+    laserscan_samples_.push_back(std::make_pair(angle, transformPointCloud(
+                Eigen::Quaternionf(
+                    Eigen::AngleAxisf(angle, Eigen::Vector3f::UnitZ())))));
+    angle += laserscan_anglar_step_;
+  }
+  ROS_INFO("start score");
+  scoreLaserScanSamples();
+}
+
+void MicvisionLocation::scoreLaserScanSamples() {
+  // ROS_INFO("score the laserscan samples.");
+  double score = 0;
+  int count = 0;
+  for ( int u = 1; u < current_map_.getHeight(); u += range_step_ ) {
+    for ( int v = 1; v < current_map_.getWidth(); v += range_step_ ) {
+  /*
+   *for ( int u = 199; u < 203; u += range_step_ ) {
+   *  for ( int v = 199; v < 203; v += range_step_ ) {
+   */
+      if ( current_map_.getData(v, u) >= 50 || current_map_.getData(v, u) == -1 )
+        continue;
+      for ( auto sample : laserscan_samples_ ) {
+        auto temp = sample.second;
+        // ROS_INFO("sample: %d, %d, %d, %d", temp.min_x, temp.min_y, temp.max_x, temp.max_y);
+        if ( u + temp.min_y <= 1 ||
+            u + temp.max_y >= current_map_.getHeight() )
+          continue;
+        if ( v + temp.min_x <= 1 ||
+            v + temp.max_x >= current_map_.getWidth() )
+          continue;
+        ROS_INFO("score the sample");
+        count++;
+        double temp_score = scoreASample(temp, u, v);
+        // ROS_INFO("angle: %f, position: (%d, %d), score: %f", sample.first, u, v, temp_score);
+        if ( temp_score > score ) {
+          score = temp_score;
+          best_angle_ = sample.first;
+          best_position_ = Eigen::Vector2i(u, v);
+        }
+      }
+    }
+  }
+
+  ROS_INFO("Best score: %f, angle: %f, Best position: %d, %d, count: %d", score, best_angle_, best_position_[0], best_position_[1], count);
+}
+
+double MicvisionLocation::scoreASample(const LaserScanSample& sample,
+                                       const int u, const int v) {
+  double score = 0;
+  for ( auto s:sample.point_cloud ) {
+    // ROS_INFO("(%d, %d)+(%d, %d)value: %d",s[0],s[1],v,u, current_map_.getData(s[0]+v, s[1]+u));
+    // s = [width, height, z]
+    score += static_cast<double>(current_map_.getData(s[0]+v, s[1]+u));
+  }
+  return score;
 }
 
 void MicvisionLocation::receiveLocationGoal(
@@ -57,6 +172,19 @@ void MicvisionLocation::receiveLocationGoal(
 
   inflateMap();
 
+  /*
+   *char fn[4096];
+   *sprintf(fn, "/home/tyu/10101.txt");
+   *FILE *fp = fopen(fn, "w");
+   *for ( int i = 0; i < current_map_.getHeight(); i++ ) {
+   *  for ( int j = 0; j < current_map_.getWidth(); j++ ) {
+   *    fprintf(fp, "%d ", current_map_.getData(i, j));
+   *  }
+   *  fprintf(fp, "\n");
+   *}
+   *fclose(fp);
+   */
+  update_laserscan_ = true;
 }
 
 bool MicvisionLocation::getMap() {
@@ -93,7 +221,6 @@ void MicvisionLocation::computeCaches() {
     for ( unsigned int j = 0; j < cell_inflation_radius_+2; j++ ) {
       double d = sqrt(static_cast<double>(i*i+j*j));
       cached_distances_[i][j] = d;
-      printf("%f " , d);
       d /= static_cast<double>(cell_inflation_radius_);
       if ( d>1 ) d = 1;
       cached_costs_[i][j] = (1.0 - d) * cost_obstacle_;
@@ -103,7 +230,7 @@ void MicvisionLocation::computeCaches() {
 
 void MicvisionLocation::inflateMap() {
   ROS_DEBUG("Infalting the map ...");
-  int map_size = current_map_.getSize();
+  const int map_size = current_map_.getSize();
 
   if ( inflation_markers_ )
     delete[] inflation_markers_;
@@ -118,9 +245,12 @@ void MicvisionLocation::inflateMap() {
       unsigned int x, y;
       current_map_.getCoordinates(x, y, index);
       enqueueObstacle(index, x, y);
-    } else if ( current_map_.getData(index) == -1 ) {
-      inflation_markers_[index] = 1;
     }
+    /*
+     *else if ( current_map_.getData(index) == -1 ) {
+     *  inflation_markers_[index] = 1;
+     *}
+     */
   }
 
   int count = 0;
@@ -148,31 +278,31 @@ void MicvisionLocation::inflateMap() {
   ROS_INFO_STREAM("Inflated " << count << " cells");
 }
 
-void MicvisionLocation::enqueueObstacle(unsigned int index,
-                                        unsigned int x,
-                                        unsigned int y) {
+void MicvisionLocation::enqueueObstacle(const unsigned int index,
+                                        const unsigned int x,
+                                        const unsigned int y) {
   unsigned int mx, my;
   if ( !current_map_.getCoordinates(mx, my, index) ||
        inflation_markers_[index] != 0 )
     return;
 
-  double d = distanceLookup(mx, my, x, y);
+  const double d = distanceLookup(mx, my, x, y);
   if ( d > cell_inflation_radius_ )
     return;
 
   CellData cell(d, index, x, y);
   inflation_queue_.push(cell);
   inflation_markers_[index] = 1;
-  signed char value = costLookup(mx, my, x, y);
+  const signed char value = costLookup(mx, my, x, y);
   current_map_.setData(index, value);
 }
 
-inline double MicvisionLocation::distanceLookup(unsigned int mx,
-                                                unsigned int my,
-                                                unsigned int sx,
-                                                unsigned int sy) {
-  unsigned int dx = abs(static_cast<int>(mx) - static_cast<int>(sx));
-  unsigned int dy = abs(static_cast<int>(my) - static_cast<int>(sy));
+inline double MicvisionLocation::distanceLookup(const unsigned int mx,
+                                                const unsigned int my,
+                                                const unsigned int sx,
+                                                const unsigned int sy) {
+  const unsigned int dx = abs(static_cast<int>(mx) - static_cast<int>(sx));
+  const unsigned int dy = abs(static_cast<int>(my) - static_cast<int>(sy));
 
   if ( dx > cell_inflation_radius_ + 1 || dy > cell_inflation_radius_ + 1 ) {
     ROS_ERROR("Error in distanceLookup table! Asked for"
@@ -183,12 +313,12 @@ inline double MicvisionLocation::distanceLookup(unsigned int mx,
   return cached_distances_[dx][dy];
 }
 
-inline signed char MicvisionLocation::costLookup(unsigned int mx,
-                                                 unsigned int my,
-                                                 unsigned int sx,
-                                                 unsigned int sy) {
-  unsigned int dx = abs(static_cast<int>(mx) - static_cast<int>(sx));
-  unsigned int dy = abs(static_cast<int>(my) - static_cast<int>(sy));
+inline signed char MicvisionLocation::costLookup(const unsigned int mx,
+                                                 const unsigned int my,
+                                                 const unsigned int sx,
+                                                 const unsigned int sy) {
+  const unsigned int dx = abs(static_cast<int>(mx) - static_cast<int>(sx));
+  const unsigned int dy = abs(static_cast<int>(my) - static_cast<int>(sy));
 
   if ( dx > cell_inflation_radius_ + 1 || dy > cell_inflation_radius_ + 1 ) {
     ROS_ERROR("Error in distanceLookup table! Asked for"

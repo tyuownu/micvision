@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(micvision_location)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+add_compile_options(-std=c++11)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -14,6 +14,9 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   sensor_msgs
 )
+
+find_package(Eigen3 REQUIRED)
+add_definitions(${EIGEN3_DEFINITIONS})
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -119,6 +122,7 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -141,8 +145,10 @@ add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
 add_dependencies(${PROJECT_NAME}_node ${catkin_EXPORTED_TARGETS})
 add_dependencies(location_client ${catkin_EXPORTED_TARGETS})
 
-target_link_libraries(${PROJECT_NAME}_node ${PROJECT_NAME} ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}_node ${PROJECT_NAME} ${catkin_LIBRARIES}
+  ${EIGEN3_LIBRARIES})
 target_link_libraries(location_client ${catkin_LIBRARIES})
+
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
