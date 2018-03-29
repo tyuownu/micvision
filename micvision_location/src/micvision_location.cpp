@@ -105,9 +105,9 @@ void MicvisionLocation::scanCallback(const sensor_msgs::LaserScan& scan) {
 
 void MicvisionLocation::handleLaserScan() {
   laserscan_samples_.clear();
-  double angle = 0;
+  double angle = -M_PI;
   laserscan_samples_.reserve(static_cast<int>(PI_2/laserscan_anglar_step_));
-  while ( angle < PI_2 ) {
+  while ( angle < M_PI ) {
     laserscan_samples_.push_back(std::make_pair(angle, transformPointCloud(
                 Eigen::Quaternionf(
                     Eigen::AngleAxisf(angle, Eigen::Vector3f::UnitZ())))));
@@ -150,12 +150,29 @@ void MicvisionLocation::scoreLaserScanSamples() {
     }
   }
 
-  ROS_INFO("Best score: %f, angle: %f, Best position: %d, %d, count: %d", score, best_angle_, best_position_[0], best_position_[1], count);
+  ROS_INFO("Best score: %f, angle: %f, Best position: %d, %d, count: %d", score, best_angle_, best_position_[1], best_position_[0], count);
 }
 
 double MicvisionLocation::scoreASample(const LaserScanSample& sample,
                                        const int u, const int v) {
   double score = 0;
+  /*
+   *  int N = 20;
+   *  int step = sample.point_cloud.size()/N;
+   *
+   *  int no_object = 0;
+   *  for ( int i = 0; i < sample.point_cloud.size(); i+=step) {
+   *    auto t = current_map_.getRawData(sample.point_cloud[i][0]+v,
+   *                                     sample.point_cloud[i][1]+u);
+   *    if ( t > 50 )
+   *      score += t;
+   *    else
+   *      no_object++;
+   *
+   *    if ( no_object >= N/3 )
+   *      return 0;
+   *  }
+   */
   for ( auto s:sample.point_cloud ) {
     // ROS_INFO("(%d, %d)+(%d, %d)value: %d",s[0],s[1],v,u, current_map_.getData(s[0]+v, s[1]+u));
     // s = [width, height, z]
