@@ -1,4 +1,5 @@
 #include <micvision_location/micvision_location.h>
+#include <micvision_location/computed_map.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 
 #include <string.h>
@@ -59,9 +60,9 @@ MicvisionLocation::MicvisionLocation() {
 
   // laserscan relative
   update_laserscan_ = false;
-  laserscan_circle_step_ = 4;
+  laserscan_circle_step_ = 6;
   range_step_ = 3;
-  laserscan_anglar_step_ = 4.0*M_PI/180;  // double
+  laserscan_anglar_step_ = 6.0*M_PI/180;  // double
 
   min_valid_range_ = 0.0;
   max_valid_range_ = 10.0;
@@ -173,6 +174,15 @@ double MicvisionLocation::scoreASample(const LaserScanSample& sample,
    *      return 0;
    *  }
    */
+  int N = 8;
+  int step = sample.point_cloud.size() / N;
+  int object = 0;
+  for ( int i = 0; i < sample.point_cloud.size(); i+=step ) {
+    if ( current_map_.getRawData(sample.point_cloud[i][0]+v,
+                                 sample.point_cloud[i][1]+u) >= 50 )
+      object++;
+  }
+  if ( object <= N/2 ) return 0;
   for ( auto s:sample.point_cloud ) {
     // ROS_INFO("(%d, %d)+(%d, %d)value: %d",s[0],s[1],v,u, current_map_.getData(s[0]+v, s[1]+u));
     // s = [width, height, z]
@@ -192,6 +202,7 @@ void MicvisionLocation::receiveLocationGoal(
   }
 
   inflateMap();
+  ComputedMapStack stack(current_map_);
 
   /*
    *char fn[4096];

@@ -1,5 +1,5 @@
-#ifndef GRID_MAP_H_
-#define GRID_MAP_H_
+#ifndef MICVISION_LOCATION_GRID_MAP_H_
+#define MICVISION_LOCATION_GRID_MAP_H_
 
 #include "ros/ros.h"
 #include "nav_msgs/OccupancyGrid.h"
@@ -163,4 +163,4 @@ class GridMap {
   signed char lethal_cost_;
 };
 
-#endif  // end GRID_MAP_H_
+#endif  // end MICVISION_LOCATION_GRID_MAP_H_

@@ -138,7 +138,7 @@ add_library(${PROJECT_NAME}
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(${PROJECT_NAME}_node src/micvision_location_node.cpp)
+add_executable(${PROJECT_NAME}_node src/micvision_location_node.cpp src/computed_map.cpp)
 add_executable(location_client src/location_client.cpp)
 
 add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
