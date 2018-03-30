@@ -109,9 +109,10 @@ void MicvisionLocation::handleLaserScan() {
   double angle = -M_PI;
   laserscan_samples_.reserve(static_cast<int>(PI_2/laserscan_anglar_step_));
   while ( angle < M_PI ) {
-    laserscan_samples_.push_back(std::make_pair(angle, transformPointCloud(
+    // angle = -M_PI + laserscan_anglar_step_ * N
+    laserscan_samples_.push_back(transformPointCloud(
                 Eigen::Quaternionf(
-                    Eigen::AngleAxisf(angle, Eigen::Vector3f::UnitZ())))));
+                    Eigen::AngleAxisf(angle, Eigen::Vector3f::UnitZ()))));
     angle += laserscan_anglar_step_;
   }
   ROS_INFO("start score");
@@ -130,8 +131,8 @@ void MicvisionLocation::scoreLaserScanSamples() {
    */
       if ( current_map_.getData(v, u) >= 50 || current_map_.getData(v, u) == -1 )
         continue;
-      for ( auto sample : laserscan_samples_ ) {
-        auto temp = sample.second;
+      for ( int i = 0; i < laserscan_samples_.size(); i++ ) {
+        auto temp = laserscan_samples_[i];
         // ROS_INFO("sample: %d, %d, %d, %d", temp.min_x, temp.min_y, temp.max_x, temp.max_y);
         if ( u + temp.min_y <= 1 ||
             u + temp.max_y >= current_map_.getHeight() )
@@ -144,7 +145,7 @@ void MicvisionLocation::scoreLaserScanSamples() {
         // ROS_INFO("angle: %f, position: (%d, %d), score: %f", sample.first, u, v, temp_score);
         if ( temp_score > score ) {
           score = temp_score;
-          best_angle_ = sample.first;
+          best_angle_ = -M_PI + i * laserscan_anglar_step_;
           best_position_ = Eigen::Vector2i(u, v);
         }
       }

@@ -97,7 +97,7 @@ class MicvisionLocation {
     double laserscan_anglar_step_;
 
     unsigned int cell_inflation_radius_;
-    std::vector<std::pair<double, LaserScanSample> > laserscan_samples_;
+    std::vector<LaserScanSample> laserscan_samples_;
     // min and max valid distance for laserscan
     double min_valid_range_, max_valid_range_;
 
