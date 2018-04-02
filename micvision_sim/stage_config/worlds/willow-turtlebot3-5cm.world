@@ -33,14 +33,14 @@ floorplan
   name "maze"
   bitmap "../maps/willow-full-0.05.pgm"
   size [ 58.25 47.25 1.0 ]
-  pose [  -23.625 29.125 0 90.00 ]
+  pose [  23.625 29.125 0 90.00 ]
 )
 
 # throw in a robot
 turtlebot3
 (
   name "robot"
-  pose [ -21.670 47.120 0.000 0 ]
+  pose [ 25.580 47.120 0.000 0 ]
 )
 define block model
 (
