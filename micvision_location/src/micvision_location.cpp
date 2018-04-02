@@ -161,6 +161,7 @@ void MicvisionLocation::scoreLaserScanSamples() {
 
         for ( auto point_index : sample.indices )
           sample_score += inflated_map_data_[point_index + uv].second;
+        sample_score /= static_cast<double>(sample_size) * 100.0;
         // ROS_INFO_STREAM("uv: " << uv << ", i: " << i << ", sample score: " << sample_score);
 
         if ( sample_score > score ) {
@@ -173,7 +174,7 @@ void MicvisionLocation::scoreLaserScanSamples() {
   }
 
   ROS_INFO("Best score: %f, angle: %f, Best position: %f, %f, count: %d",
-           score, best_angle_,
+           score, best_angle_*180/M_PI,
            best_position_[1] * resolution_,
            best_position_[0] * resolution_, count);
 }
@@ -227,7 +228,6 @@ void MicvisionLocation::receiveLocationGoal(
   }
 
   inflateMap();
-  ComputedMapStack stack(current_map_);
 
   /*
    *char fn[4096];
