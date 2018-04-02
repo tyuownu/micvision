@@ -40,6 +40,7 @@ struct CellData {
 
 struct LaserScanSample {
   PointCloudUV point_cloud;
+  std::vector<int> indices;
   int min_x, max_x;
   int min_y, max_y;
 };
@@ -119,6 +120,11 @@ class MicvisionLocation {
     double **cached_distances_;
     unsigned char *inflation_markers_;
     std::priority_queue<CellData> inflation_queue_;
+
+    // for quick search
+    std::vector<std::pair<bool, signed char> > inflated_map_data_;
+    int width_, height_;
+    double resolution_;
 };
 }  // namespace micvision
 #endif  // end MICVISION_LOCATION_H_

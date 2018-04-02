@@ -14,9 +14,11 @@ LaserScanSample MicvisionLocation::transformPointCloud(
     const Eigen::Quaternionf& transform) {
   PointCloudUV result;
   result.reserve(point_cloud_.size());
+  std::vector<int> indices;
+  indices.reserve(point_cloud_.size());
   const float resolution = current_map_.getResolution();
-  int min_x = current_map_.getWidth(), max_x = -min_x;
-  int min_y = current_map_.getHeight(), max_y = -min_y;
+  int min_x = width_, max_x = -min_x;
+  int min_y = height_, max_y = -min_y;
   for ( const Eigen::Vector3f& point:point_cloud_ ) {
     // result.emplace_back(transform * point);
     const Eigen::Vector2i temp = floor(transform * point / resolution);
@@ -25,8 +27,9 @@ LaserScanSample MicvisionLocation::transformPointCloud(
     max_x = max_x > temp[0] ? max_x : temp[0];
     max_y = max_y > temp[1] ? max_y : temp[1];
     result.emplace_back(temp);
+    indices.emplace_back(temp[0] + temp[1] * width_);
   }
-  return LaserScanSample{result, min_x, max_x, min_y, max_y};
+  return LaserScanSample{result, indices, min_x, max_x, min_y, max_y};
 }
 
 MicvisionLocation::MicvisionLocation() {
@@ -110,7 +113,7 @@ void MicvisionLocation::handleLaserScan() {
   laserscan_samples_.reserve(static_cast<int>(PI_2/laserscan_anglar_step_));
   while ( angle < M_PI ) {
     // angle = -M_PI + laserscan_anglar_step_ * N
-    laserscan_samples_.push_back(transformPointCloud(
+    laserscan_samples_.emplace_back(transformPointCloud(
                 Eigen::Quaternionf(
                     Eigen::AngleAxisf(angle, Eigen::Vector3f::UnitZ()))));
     angle += laserscan_anglar_step_;
@@ -123,28 +126,45 @@ void MicvisionLocation::scoreLaserScanSamples() {
   // ROS_INFO("score the laserscan samples.");
   double score = 0;
   int count = 0;
-  for ( int u = 1; u < current_map_.getHeight(); u += range_step_ ) {
-    for ( int v = 1; v < current_map_.getWidth(); v += range_step_ ) {
-  /*
-   *for ( int u = 199; u < 203; u += range_step_ ) {
-   *  for ( int v = 199; v < 203; v += range_step_ ) {
-   */
-      if ( current_map_.getData(v, u) >= 50 || current_map_.getData(v, u) == -1 )
+
+  ROS_INFO_STREAM("inflated map data size: " << inflated_map_data_.size());
+  const int N = 8, half_N = N/2;
+  const int sample_size = laserscan_samples_[0].point_cloud.size();
+  const int step = sample_size / N;
+  // for ( int uv = 0; uv < inflated_map_data_.size(); ++uv ) {
+  for ( int u = 0; u < height_; u += range_step_ ) {
+    for ( int v = 0; v < width_; v += range_step_ ) {
+      const int uv = u*width_ + v;
+      if ( !inflated_map_data_[uv].first ) {
         continue;
-      for ( int i = 0; i < laserscan_samples_.size(); i++ ) {
-        auto temp = laserscan_samples_[i];
-        // ROS_INFO("sample: %d, %d, %d, %d", temp.min_x, temp.min_y, temp.max_x, temp.max_y);
-        if ( u + temp.min_y <= 1 ||
-            u + temp.max_y >= current_map_.getHeight() )
+      }
+
+      for ( int i = 0; i < laserscan_samples_.size(); ++i ) {
+        LaserScanSample &sample = laserscan_samples_[i];
+        if ( v + sample.min_y <= 1 || v + sample.max_x >= width_ - 1 )
           continue;
-        if ( v + temp.min_x <= 1 ||
-            v + temp.max_x >= current_map_.getWidth() )
+        if ( u + sample.min_y <= 1 || u + sample.max_y >= height_ - 1 )
+          continue;
+
+        double sample_score = 0;
+        int object = 0;
+        for ( int point_index = 0; point_index < sample_size;
+             point_index += step ) {
+          if ( inflated_map_data_[sample.indices[point_index]
+                                  + uv].second >= 50 )
+            ++object;
+        }
+
+        if ( object <= half_N )
           continue;
         count++;
-        double temp_score = scoreASample(temp, u, v);
-        // ROS_INFO("angle: %f, position: (%d, %d), score: %f", sample.first, u, v, temp_score);
-        if ( temp_score > score ) {
-          score = temp_score;
+
+        for ( auto point_index : sample.indices )
+          sample_score += inflated_map_data_[point_index + uv].second;
+        // ROS_INFO_STREAM("uv: " << uv << ", i: " << i << ", sample score: " << sample_score);
+
+        if ( sample_score > score ) {
+          score = sample_score;
           best_angle_ = -M_PI + i * laserscan_anglar_step_;
           best_position_ = Eigen::Vector2i(u, v);
         }
@@ -152,7 +172,10 @@ void MicvisionLocation::scoreLaserScanSamples() {
     }
   }
 
-  ROS_INFO("Best score: %f, angle: %f, Best position: %d, %d, count: %d", score, best_angle_, best_position_[1], best_position_[0], count);
+  ROS_INFO("Best score: %f, angle: %f, Best position: %f, %f, count: %d",
+           score, best_angle_,
+           best_position_[1] * resolution_,
+           best_position_[0] * resolution_, count);
 }
 
 double MicvisionLocation::scoreASample(const LaserScanSample& sample,
@@ -195,9 +218,10 @@ double MicvisionLocation::scoreASample(const LaserScanSample& sample,
 
 void MicvisionLocation::receiveLocationGoal(
     const micvision_location::LocationGoal::ConstPtr &goal) {
+  static bool first_location_goal = true;
 
-  update_laserscan_ = true;
-  if ( !getMap() ) {
+  if ( !getMap() && !first_location_goal ) {
+    update_laserscan_ = true;
     ROS_WARN("Could not get a new map, trying to go with the old one...");
     return;
   }
@@ -217,6 +241,8 @@ void MicvisionLocation::receiveLocationGoal(
    *}
    *fclose(fp);
    */
+  update_laserscan_ = true;
+  first_location_goal = false;
 }
 
 bool MicvisionLocation::getMap() {
@@ -264,6 +290,9 @@ void MicvisionLocation::computeCaches() {
 void MicvisionLocation::inflateMap() {
   ROS_DEBUG("Infalting the map ...");
   const int map_size = current_map_.getSize();
+  width_ = current_map_.getWidth();
+  height_ = current_map_.getHeight();
+  resolution_ = current_map_.getResolution();
 
   if ( inflation_markers_ )
     delete[] inflation_markers_;
@@ -298,17 +327,34 @@ void MicvisionLocation::inflateMap() {
     if ( x >= 1 )
       enqueueObstacle(cell.index-1, cell.x, cell.y);
 
-    if ( x < current_map_.getWidth() - 1 )
+    if ( x < width_ - 1 )
       enqueueObstacle(cell.index+1, cell.x, cell.y);
 
     if ( y >= 1 )
-      enqueueObstacle(cell.index-current_map_.getWidth(), cell.x, cell.y);
+      enqueueObstacle(cell.index - width_, cell.x, cell.y);
 
     if ( y < current_map_.getHeight() - 1 )
-      enqueueObstacle(cell.index+current_map_.getWidth(), cell.x, cell.y);
+      enqueueObstacle(cell.index + width_, cell.x, cell.y);
     count++;
   }
   ROS_INFO_STREAM("Inflated " << count << " cells");
+
+  inflated_map_data_.reserve(height_ * width_);
+  for ( int u = 0; u < height_; ++u ) {
+    for ( int v = 0; v < width_; ++v ) {
+      auto data = current_map_.getData(v, u);
+      if ( data >= 0 && data < 50 )
+      {
+        inflated_map_data_.emplace_back(std::make_pair(true, data));
+      }
+      else
+        inflated_map_data_.emplace_back(std::make_pair(false, data));
+      /*
+       *inflated_map_data_.emplace_back(
+       *    std::make_pair(data >= 0 && data < 50, data));
+       */
+    }
+  }
 }
 
 void MicvisionLocation::enqueueObstacle(const unsigned int index,
