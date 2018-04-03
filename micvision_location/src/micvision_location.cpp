@@ -1,6 +1,7 @@
 #include <micvision_location/micvision_location.h>
 #include <micvision_location/computed_map.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <tf/transform_listener.h>
 
 #include <string.h>
 
@@ -132,18 +133,18 @@ void MicvisionLocation::scoreLaserScanSamples() {
   const int sample_size = laserscan_samples_[0].point_cloud.size();
   const int step = sample_size / N;
   // for ( int uv = 0; uv < inflated_map_data_.size(); ++uv ) {
-  for ( int u = 0; u < height_; u += range_step_ ) {
-    for ( int v = 0; v < width_; v += range_step_ ) {
-      const int uv = u*width_ + v;
+  for ( int v = 0; v < height_; v += range_step_ ) {
+    for ( int u = 0; u < width_; u += range_step_ ) {
+      const int uv = v*width_ + u;
       if ( !inflated_map_data_[uv].first ) {
         continue;
       }
 
       for ( int i = 0; i < laserscan_samples_.size(); ++i ) {
-        LaserScanSample &sample = laserscan_samples_[i];
-        if ( v + sample.min_y <= 1 || v + sample.max_x >= width_ - 1 )
+        const LaserScanSample &sample = laserscan_samples_[i];
+        if ( u + sample.min_x <= 1 || u + sample.max_x >= width_ - 1 )
           continue;
-        if ( u + sample.min_y <= 1 || u + sample.max_y >= height_ - 1 )
+        if ( v + sample.min_y <= 1 || v + sample.max_y >= height_ - 1 )
           continue;
 
         double sample_score = 0;
@@ -173,10 +174,30 @@ void MicvisionLocation::scoreLaserScanSamples() {
     }
   }
 
+  geometry_msgs::PoseWithCovarianceStamped init_pose;
+  const double x = best_position_[0]*resolution_ + current_map_.getOriginX();
+  const double y = best_position_[1]*resolution_ + current_map_.getOriginY();
+
+  init_pose.header.stamp = ros::Time::now();
+  init_pose.header.frame_id = "map";
+
+  init_pose.pose.pose.position.x = x;
+  init_pose.pose.pose.position.y = y;
+  init_pose.pose.pose.position.z = 0;
+
+  init_pose.pose.pose.orientation = tf::createQuaternionMsgFromYaw(best_angle_*180/M_PI);
+  init_pose.pose.covariance = {0.25, 0.0, 0.0, 0.0, 0.0, 0.0,
+                               0.0, 0.25, 0.0, 0.0, 0.0, 0.0,
+                               0.0,  0.0, 0.0, 0.0, 0.0, 0.0,
+                               0.0,  0.0, 0.0, 0.0, 0.0, 0.0,
+                               0.0,  0.0, 0.0, 0.0, 0.0, 0.0,
+                               0.0,  0.0, 0.0, 0.0, 0.0, 0.06853891945200942 };
+
+  position_publisher_.publish(init_pose);
+
+
   ROS_INFO("Best score: %f, angle: %f, Best position: %f, %f, count: %d",
-           score, best_angle_*180/M_PI,
-           best_position_[1] * resolution_,
-           best_position_[0] * resolution_, count);
+           score, best_angle_*180/M_PI, x, y, count);
 }
 
 double MicvisionLocation::scoreASample(const LaserScanSample& sample,
