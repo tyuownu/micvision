@@ -185,7 +185,7 @@ void MicvisionLocation::scoreLaserScanSamples() {
   init_pose.pose.pose.position.y = y;
   init_pose.pose.pose.position.z = 0;
 
-  init_pose.pose.pose.orientation = tf::createQuaternionMsgFromYaw(best_angle_*180/M_PI);
+  init_pose.pose.pose.orientation = tf::createQuaternionMsgFromYaw(best_angle_);
   init_pose.pose.covariance = {0.25, 0.0, 0.0, 0.0, 0.0, 0.0,
                                0.0, 0.25, 0.0, 0.0, 0.0, 0.0,
                                0.0,  0.0, 0.0, 0.0, 0.0, 0.0,
