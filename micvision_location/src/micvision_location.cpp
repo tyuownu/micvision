@@ -1,5 +1,5 @@
 #include <micvision_location/micvision_location.h>
-#include <micvision_location/computed_map.h>
+// #include <micvision_location/computed_map.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <tf/transform_listener.h>
 
@@ -42,11 +42,9 @@ MicvisionLocation::MicvisionLocation() {
   map_sub_  = nh.subscribe("/map", 1, &MicvisionLocation::mapCallback, this);
   scan_sub_ = nh.subscribe("/scan", 1, &MicvisionLocation::scanCallback, this);
 
-  location_action_server_ = new
-      LocationActionServer(LOCATION_ACTION,
-                           boost::bind(&MicvisionLocation::receiveLocationGoal,
-                                       this, _1), false);
-  location_action_server_->start();
+  location_server_ =
+      nh.advertiseService(LOCATION_SERVICE,
+                          &MicvisionLocation::receiveLocation, this);
 
   std::string service_name;
   nh.param("map_service", service_name, std::string("/static_map"));
@@ -63,7 +61,7 @@ MicvisionLocation::MicvisionLocation() {
   cached_costs_ = NULL;
 
   // laserscan relative
-  update_laserscan_ = false;
+  handling_lasescan_ = false;
   laserscan_circle_step_ = 6;
   range_step_ = 3;
   laserscan_anglar_step_ = 6.0*M_PI/180;  // double
@@ -73,7 +71,6 @@ MicvisionLocation::MicvisionLocation() {
 }
 
 MicvisionLocation::~MicvisionLocation() {
-  delete location_action_server_;
   delete[] inflation_markers_;
   delete[] cached_distances_;
   delete[] cached_costs_;
@@ -81,14 +78,21 @@ MicvisionLocation::~MicvisionLocation() {
 
 void MicvisionLocation::mapCallback(const nav_msgs::OccupancyGrid& map) {
   ROS_DEBUG("mapCallback");
+
+  // only inflate the map when the first map or a new map comes
+  if ( !getMap() ) {
+    ROS_WARN("Could not get a new map, trying to go with the old one...");
+    return;
+  }
+
+  inflateMap();
 }
 
 void MicvisionLocation::scanCallback(const sensor_msgs::LaserScan& scan) {
   // ROS_INFO("scanCallback, scan size: %d", scan.ranges.size());
 
-  if ( ros::ok() && update_laserscan_ ) {
+  if ( ros::ok() && !handling_lasescan_ ) {
     point_cloud_.clear();
-    update_laserscan_ = false;
     // generate the point_cloud_
     float angle = scan.angle_min;
     for ( int i = 0; i < scan.ranges.size(); i += laserscan_circle_step_ ) {
@@ -100,13 +104,13 @@ void MicvisionLocation::scanCallback(const sensor_msgs::LaserScan& scan) {
 
       angle += scan.angle_increment * laserscan_circle_step_;
     }
-
-    handleLaserScan();
+    // handleLaserScan();
 
   }
 }
 
 void MicvisionLocation::handleLaserScan() {
+  handling_lasescan_ = true;
   laserscan_samples_.clear();
   double angle = -M_PI;
   laserscan_samples_.reserve(static_cast<int>(PI_2/laserscan_anglar_step_));
@@ -117,16 +121,18 @@ void MicvisionLocation::handleLaserScan() {
                     Eigen::AngleAxisf(angle, Eigen::Vector3f::UnitZ()))));
     angle += laserscan_anglar_step_;
   }
-  ROS_INFO("start score");
-  scoreLaserScanSamples();
+  handling_lasescan_ = false;
 }
 
 void MicvisionLocation::scoreLaserScanSamples() {
+  // first we need handle the point_cloud_
+  handleLaserScan();
+  ROS_INFO("start score");
   // ROS_INFO("score the laserscan samples.");
   double score = 0;
   int count = 0;
 
-  ROS_INFO_STREAM("inflated map data size: " << inflated_map_data_.size());
+  // ROS_INFO_STREAM("inflated map data size: " << inflated_map_data_.size());
   const int N = 8, half_N = N/2;
   const int sample_size = laserscan_samples_[0].point_cloud.size();
   const int step = sample_size / N;
@@ -235,17 +241,12 @@ double MicvisionLocation::scoreASample(const LaserScanSample& sample,
   return score;
 }
 
-void MicvisionLocation::receiveLocationGoal(
-    const micvision_location::LocationGoal::ConstPtr &goal) {
-  static bool first_location_goal = true;
-
-  if ( !getMap() && !first_location_goal ) {
-    update_laserscan_ = true;
-    ROS_WARN("Could not get a new map, trying to go with the old one...");
-    return;
-  }
-
-  inflateMap();
+bool MicvisionLocation::receiveLocation(
+    std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &res) {
+  scoreLaserScanSamples();
+  res.success = true;
+  res.message = "Location success.";
+  return true;
 
   /*
    *char fn[4096];
@@ -259,8 +260,6 @@ void MicvisionLocation::receiveLocationGoal(
    *}
    *fclose(fp);
    */
-  update_laserscan_ = true;
-  first_location_goal = false;
 }
 
 bool MicvisionLocation::getMap() {
@@ -335,7 +334,7 @@ void MicvisionLocation::inflateMap() {
 
   int count = 0;
   while ( !inflation_queue_.empty() ) {
-    CellData cell = inflation_queue_.top();
+    const CellData cell = inflation_queue_.top();
     inflation_queue_.pop();
 
     unsigned int x, y;
@@ -360,7 +359,7 @@ void MicvisionLocation::inflateMap() {
   inflated_map_data_.reserve(height_ * width_);
   for ( int u = 0; u < height_; ++u ) {
     for ( int v = 0; v < width_; ++v ) {
-      auto data = current_map_.getData(v, u);
+      const auto data = current_map_.getData(v, u);
       if ( data >= 0 && data < 50 )
       {
         inflated_map_data_.emplace_back(std::make_pair(true, data));
@@ -387,7 +386,7 @@ void MicvisionLocation::enqueueObstacle(const unsigned int index,
   if ( d > cell_inflation_radius_ )
     return;
 
-  CellData cell(d, index, x, y);
+  const CellData cell(d, index, x, y);
   inflation_queue_.push(cell);
   inflation_markers_[index] = 1;
   const signed char value = costLookup(mx, my, x, y);

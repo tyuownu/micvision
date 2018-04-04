@@ -8,9 +8,11 @@
 #include <actionlib/server/simple_action_server.h>
 #include <actionlib/client/simple_action_client.h>
 
-#include <micvision_location/LocationAction.h>
+// #include <micvision_location/LocationAction.h>
 #include <micvision_location/commands.h>
 #include <micvision_location/grid_map.h>
+
+#include <std_srvs/Trigger.h>
 
 #include <queue>
 #include <vector>
@@ -21,7 +23,6 @@
 const double PI_2 = 2*M_PI;
 
 namespace micvision {
-typedef actionlib::SimpleActionServer<micvision_location::LocationAction> LocationActionServer;
 typedef std::vector<Eigen::Vector3f> PointCloud;
 typedef std::vector<Eigen::Vector2i> PointCloudUV;
 
@@ -52,8 +53,8 @@ class MicvisionLocation {
 
     void mapCallback(const nav_msgs::OccupancyGrid& map);
     void scanCallback(const sensor_msgs::LaserScan& scan);
-    void receiveLocationGoal(
-        const micvision_location::LocationGoal::ConstPtr &goal);
+    bool receiveLocation(
+        std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &res );
     bool getMap();
 
     // Inflation radius relative
@@ -90,7 +91,7 @@ class MicvisionLocation {
     signed char cost_obstacle_;
 
     // laserscan relative
-    bool update_laserscan_;
+    bool handling_lasescan_;
     PointCloud point_cloud_;
 
     int laserscan_circle_step_;
@@ -111,7 +112,7 @@ class MicvisionLocation {
     ros::Publisher position_publisher_;
     ros::Subscriber map_sub_;
     ros::Subscriber scan_sub_;
-    LocationActionServer *location_action_server_;
+    ros::ServiceServer location_server_;
 
     ros::ServiceClient get_map_client_;
 

@@ -66,15 +66,14 @@ add_definitions(${EIGEN3_DEFINITIONS})
 # )
 
 ## Generate actions in the 'action' folder
-add_action_files(
-  FILES
-  Location.action
-)
+# add_action_files(
+#   FILES
+#   Location.action
+# )
 
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
-  actionlib_msgs
   geometry_msgs
 )
 
@@ -110,7 +109,7 @@ generate_messages(
 catkin_package(
   INCLUDE_DIRS include
 #  LIBRARIES micvision_location
-  CATKIN_DEPENDS actionlib actionlib_msgs roscpp geometry_msgs
+  CATKIN_DEPENDS  roscpp geometry_msgs
 )
 
 ###########
@@ -138,16 +137,16 @@ add_library(${PROJECT_NAME}
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(${PROJECT_NAME}_node src/micvision_location_node.cpp src/computed_map.cpp)
-add_executable(location_client src/location_client.cpp)
+add_executable(${PROJECT_NAME}_node src/micvision_location_node.cpp)
+## add_executable(location_client src/location_client.cpp)
 
 add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
 add_dependencies(${PROJECT_NAME}_node ${catkin_EXPORTED_TARGETS})
-add_dependencies(location_client ${catkin_EXPORTED_TARGETS})
+## add_dependencies(location_client ${catkin_EXPORTED_TARGETS})
 
 target_link_libraries(${PROJECT_NAME}_node ${PROJECT_NAME} ${catkin_LIBRARIES}
   ${EIGEN3_LIBRARIES})
-target_link_libraries(location_client ${catkin_LIBRARIES})
+## target_link_libraries(location_client ${catkin_LIBRARIES})
 
 
 ## Rename C++ executable without prefix
@@ -180,7 +179,7 @@ target_link_libraries(location_client ${catkin_LIBRARIES})
 # )
 
 ## Mark executables and/or libraries for installation
-install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_node location_client
+install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_node
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

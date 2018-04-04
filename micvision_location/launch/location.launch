@@ -2,5 +2,7 @@
   <node name="micvision_location_node" pkg="micvision_location" type="micvision_location_node"/>
     <!-- set some parameter here -->
 
-  <node name="location_client" pkg="micvision_location" type="location_client" />
+  <!--
+    <node name="location_client" pkg="micvision_location" type="location_client" />
+  -->
 </launch>
