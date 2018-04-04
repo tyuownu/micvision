@@ -41,6 +41,8 @@ MicvisionLocation::MicvisionLocation() {
 
   map_sub_  = nh.subscribe("/map", 1, &MicvisionLocation::mapCallback, this);
   scan_sub_ = nh.subscribe("/scan", 1, &MicvisionLocation::scanCallback, this);
+  debug_position_sub_ = nh.subscribe(
+      "/debug_position", 1, &MicvisionLocation::debugAPosition, this);
 
   location_server_ =
       nh.advertiseService(LOCATION_SERVICE,
@@ -423,5 +425,50 @@ inline signed char MicvisionLocation::costLookup(const unsigned int mx,
     return 0;
   }
   return cached_costs_[dx][dy];
+}
+
+void MicvisionLocation::debugAPosition(const geometry_msgs::Pose2D &pose) {
+  handleLaserScan();
+  const double origin_x = current_map_.getOriginX();
+  const double origin_y = current_map_.getOriginY();
+  ROS_INFO("origin: [%f, %f]", origin_x, origin_y);
+
+  const int u = ( pose.x - origin_x ) / resolution_ + 1;
+  const int v = ( pose.y - origin_y ) / resolution_ + 1;
+  const int angle_index = (pose.theta / 180.0 + 1) *
+      M_PI / laserscan_anglar_step_;
+
+  double score;
+  const LaserScanSample &sample = laserscan_samples_[angle_index];
+  ROS_INFO("angle index: %d, u: %d, v:%d", angle_index, u, v);
+
+  if ( v + sample.min_y <= 1 || v + sample.max_y >= height_ - 1 ||
+      u + sample.min_x <= 1 || u + sample.max_x >= width_ - 1 ) {
+    ROS_INFO("the laser is out of map's bound.");
+    return;
+  }
+
+  const int uv = v*width_ + u;
+
+  for ( const auto point_index : sample.indices )
+    score += inflated_map_data_[point_index + uv].second;
+
+  score /= static_cast<double>(sample.indices.size()) * 100.0;
+
+  ROS_INFO("Position: [%f, %f], angle: %f, score: %f",
+           pose.x, pose.y, pose.theta, score);
+
+  ROS_INFO("u: %d, v: %d", u, v );
+  for ( auto point_index : sample.indices )
+    ROS_INFO("index: %d, score: %d", point_index,
+             static_cast<int>( inflated_map_data_[point_index + uv].second ));
+
+  ROS_INFO("\n\n\nnext is the best position.");
+  const LaserScanSample &best_sample =
+      laserscan_samples_[( best_angle_+M_PI )/laserscan_anglar_step_ + 1];
+  const int best_uv = best_position_[1] * width_ + best_position_[0];
+  for ( const auto index : best_sample.indices )
+    ROS_INFO("index: %d, score: %d", index,
+             static_cast<int>( inflated_map_data_[index + best_uv].second ));
 }
 }  // end namespace micvision

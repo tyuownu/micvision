@@ -13,6 +13,7 @@
 #include <micvision_location/grid_map.h>
 
 #include <std_srvs/Trigger.h>
+#include <geometry_msgs/Pose2D.h>
 
 #include <queue>
 #include <vector>
@@ -66,6 +67,8 @@ class MicvisionLocation {
     double scoreASample(const LaserScanSample& sample,
                         const int x, const int y);
 
+    void debugAPosition(const geometry_msgs::Pose2D &pose);
+
 
  private:
     // private function
@@ -112,6 +115,7 @@ class MicvisionLocation {
     ros::Publisher position_publisher_;
     ros::Subscriber map_sub_;
     ros::Subscriber scan_sub_;
+    ros::Subscriber debug_position_sub_;
     ros::ServiceServer location_server_;
 
     ros::ServiceClient get_map_client_;
