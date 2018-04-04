@@ -96,9 +96,7 @@ void MicvisionLocation::scanCallback(const sensor_msgs::LaserScan& scan) {
       if ( min_valid_range_ <= range && range <= max_valid_range_ ) {
         const Eigen::AngleAxisf rotation(angle, Eigen::Vector3f::UnitZ());
         point_cloud_.push_back(rotation*( range*Eigen::Vector3f::UnitX() ));
-        // ROS_INFO_STREAM("range: " << range << ", points: " << (rotation*(range*Eigen::Vector3f::UnitX())).transpose());
       }
-      // ROS_INFO_STREAM("ange: " << range);
 
       angle += scan.angle_increment * laserscan_circle_step_;
     }
@@ -163,7 +161,6 @@ void MicvisionLocation::scoreLaserScanSamples() {
         for ( auto point_index : sample.indices )
           sample_score += inflated_map_data_[point_index + uv].second;
         sample_score /= static_cast<double>(sample_size) * 100.0;
-        // ROS_INFO_STREAM("uv: " << uv << ", i: " << i << ", sample score: " << sample_score);
 
         if ( sample_score > score ) {
           score = sample_score;
@@ -185,7 +182,8 @@ void MicvisionLocation::scoreLaserScanSamples() {
   init_pose.pose.pose.position.y = y;
   init_pose.pose.pose.position.z = 0;
 
-  init_pose.pose.pose.orientation = tf::createQuaternionMsgFromYaw(best_angle_);
+  init_pose.pose.pose.orientation =
+      tf::createQuaternionMsgFromYaw(best_angle_);
   init_pose.pose.covariance = {0.25, 0.0, 0.0, 0.0, 0.0, 0.0,
                                0.0, 0.25, 0.0, 0.0, 0.0, 0.0,
                                0.0,  0.0, 0.0, 0.0, 0.0, 0.0,
@@ -230,7 +228,6 @@ double MicvisionLocation::scoreASample(const LaserScanSample& sample,
   }
   if ( object <= N/2 ) return 0;
   for ( auto s:sample.point_cloud ) {
-    // ROS_INFO("(%d, %d)+(%d, %d)value: %d",s[0],s[1],v,u, current_map_.getData(s[0]+v, s[1]+u));
     // s = [width, height, z]
     score += current_map_.getRawData(s[0]+v, s[1]+u);
   }
