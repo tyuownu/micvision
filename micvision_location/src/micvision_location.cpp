@@ -70,8 +70,26 @@ MicvisionLocation::MicvisionLocation() {
 
   min_valid_range_ = 0.0;
   max_valid_range_ = 10.0;
-  N_ = 8;
+  quick_score_num_ = 8;
   quick_score_ = true;
+
+  dynamic_srv_ = new LocationConfigServer(ros::NodeHandle("~"));
+  CallbackType cb = boost::bind(&MicvisionLocation::reconfigureCB, this, _1, _2);
+  dynamic_srv_->setCallback(cb);
+}
+
+void MicvisionLocation::reconfigureCB(Config &config, uint32_t level) {
+  inflation_radius_ = config.inflation_radius;
+  robot_radius_ = config.robot_radius;
+  laserscan_circle_step_ = config.laserscan_circle_step;
+  range_step_ = config.range_step;
+  laserscan_anglar_step_ = config.laserscan_anglar_step;
+  min_valid_range_ = config.min_valid_range;
+  max_valid_range_ = config.max_valid_range;
+  quick_score_ = config.quick_score;
+  quick_score_num_ = config.quick_score_num;
+
+  return;
 }
 
 MicvisionLocation::~MicvisionLocation() {
@@ -138,9 +156,8 @@ void MicvisionLocation::scoreLaserScanSamples() {
   int count = 0;
 
   // ROS_INFO_STREAM("inflated map data size: " << inflated_map_data_.size());
-  const int N = 8, half_N = N/2;
   const int sample_size = laserscan_samples_[0].point_cloud.size();
-  const int step = sample_size / N;
+  const int step = sample_size / quick_score_num_;
   // for ( int uv = 0; uv < inflated_map_data_.size(); ++uv ) {
   for ( int v = 0; v < height_; v += range_step_ ) {
     for ( int u = 0; u < width_; u += range_step_ ) {
@@ -157,16 +174,18 @@ void MicvisionLocation::scoreLaserScanSamples() {
           continue;
 
         double sample_score = 0;
-        int object = 0;
-        for ( int point_index = 0; point_index < sample_size;
-             point_index += step ) {
-          if ( inflated_map_data_[sample.indices[point_index]
-                                  + uv].second >= 50 )
-            ++object;
-        }
+        if ( quick_score_ ) {
+          int object = 0;
+          for ( int point_index = 0; point_index < sample_size;
+               point_index += step ) {
+            if ( inflated_map_data_[sample.indices[point_index]
+                + uv].second >= 50 )
+              ++object;
+          }
 
-        if ( object <= half_N )
-          continue;
+          if ( object <= quick_score_num_ / 2 )
+            continue;
+        }
         count++;
 
         for ( auto point_index : sample.indices )
@@ -194,7 +213,7 @@ void MicvisionLocation::scoreLaserScanSamples() {
   init_pose.pose.pose.position.z = 0;
 
   init_pose.pose.pose.orientation =
-      tf::createQuaternionMsgFromYaw(best_angle_ * M_PI / 180);
+      tf::createQuaternionMsgFromYaw(best_angle_);
   init_pose.pose.covariance = {0.25, 0.0, 0.0, 0.0, 0.0, 0.0,
                                0.0, 0.25, 0.0, 0.0, 0.0, 0.0,
                                0.0,  0.0, 0.0, 0.0, 0.0, 0.0,
@@ -213,14 +232,14 @@ double MicvisionLocation::scoreASample(const LaserScanSample& sample,
                                        const int u, const int v) {
   double score = 0;
   if ( quick_score_ ) {
-    int step = sample.point_cloud.size() / N_;
+    int step = sample.point_cloud.size() / quick_score_num_;
     int object = 0;
     for ( int i = 0; i < sample.point_cloud.size(); i+=step ) {
       if ( current_map_.getRawData(sample.point_cloud[i][0]+v,
                                    sample.point_cloud[i][1]+u) >= 50 )
         object++;
     }
-    if ( object <= N_/2 ) return 0;
+    if ( object <= quick_score_num_/2 ) return 0;
   }
   for ( auto s:sample.point_cloud ) {
     // s = [width, height, z]

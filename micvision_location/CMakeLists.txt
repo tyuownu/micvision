@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   geometry_msgs
   sensor_msgs
+  dynamic_reconfigure
 )
 
 find_package(Eigen3 REQUIRED)
@@ -92,10 +93,9 @@ generate_messages(
 ##     and list every .cfg file to be processed
 
 ## Generate dynamic reconfigure parameters in the 'cfg' folder
-# generate_dynamic_reconfigure_options(
-#   cfg/DynReconf1.cfg
-#   cfg/DynReconf2.cfg
-# )
+generate_dynamic_reconfigure_options(
+  cfg/location.cfg
+)
 
 ###################################
 ## catkin specific configuration ##
@@ -109,7 +109,7 @@ generate_messages(
 catkin_package(
   INCLUDE_DIRS include
 #  LIBRARIES micvision_location
-  CATKIN_DEPENDS  roscpp geometry_msgs
+  CATKIN_DEPENDS  roscpp geometry_msgs dynamic_reconfigure
 )
 
 ###########

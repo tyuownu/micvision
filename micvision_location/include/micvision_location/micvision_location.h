@@ -16,6 +16,8 @@
 // #include <micvision_location/LocationAction.h>
 #include <micvision_location/commands.h>
 #include <micvision_location/grid_map.h>
+#include <dynamic_reconfigure/server.h>
+#include <micvision_location/LocationConfig.h>
 
 
 // std
@@ -32,6 +34,9 @@ constexpr double PI_2 = 2*M_PI;
 constexpr double RADIAN_PRE_DEGREE = M_PI/180;
 typedef std::vector<Eigen::Vector3f> PointCloud;
 typedef std::vector<Eigen::Vector2i> PointCloudUV;
+typedef micvision_location::LocationConfig Config;
+typedef dynamic_reconfigure::Server<Config> LocationConfigServer;
+typedef dynamic_reconfigure::Server<Config>::CallbackType CallbackType;
 
 struct CellData {
  public:
@@ -93,6 +98,8 @@ class MicvisionLocation {
                          const unsigned int x,
                          const unsigned int y);
 
+    void reconfigureCB(Config &config, uint32_t level);
+
     bool has_new_map_;
     double inflation_radius_;
     unsigned int cell_inflation_radius_;
@@ -147,8 +154,10 @@ class MicvisionLocation {
 
     /// quick score
     /// we using quick score to define this point is reseanable
-    int N_;
+    int quick_score_num_;
     bool quick_score_;
+
+    LocationConfigServer *dynamic_srv_; 
 
 };
 }  // namespace micvision
