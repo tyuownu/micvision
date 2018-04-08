@@ -66,10 +66,12 @@ MicvisionLocation::MicvisionLocation() {
   handling_lasescan_ = false;
   laserscan_circle_step_ = 6;
   range_step_ = 3;
-  laserscan_anglar_step_ = 6.0*M_PI/180;  // double
+  laserscan_anglar_step_ = 6.0;   // degree
 
   min_valid_range_ = 0.0;
   max_valid_range_ = 10.0;
+  N_ = 8;
+  quick_score_ = true;
 }
 
 MicvisionLocation::~MicvisionLocation() {
@@ -115,13 +117,14 @@ void MicvisionLocation::handleLaserScan() {
   handling_lasescan_ = true;
   laserscan_samples_.clear();
   double angle = -M_PI;
-  laserscan_samples_.reserve(static_cast<int>(PI_2/laserscan_anglar_step_));
-  while ( angle < M_PI ) {
+  laserscan_samples_.reserve(static_cast<int>(
+          PI_2/RADIAN_PRE_DEGREE/laserscan_anglar_step_));
+  while ( angle <= M_PI ) {
     // angle = -M_PI + laserscan_anglar_step_ * N
     laserscan_samples_.emplace_back(transformPointCloud(
                 Eigen::Quaternionf(
                     Eigen::AngleAxisf(angle, Eigen::Vector3f::UnitZ()))));
-    angle += laserscan_anglar_step_;
+    angle += laserscan_anglar_step_ * RADIAN_PRE_DEGREE;
   }
   handling_lasescan_ = false;
 }
@@ -172,7 +175,7 @@ void MicvisionLocation::scoreLaserScanSamples() {
 
         if ( sample_score > score ) {
           score = sample_score;
-          best_angle_ = -M_PI + i * laserscan_anglar_step_;
+          best_angle_ = -M_PI + i * laserscan_anglar_step_ * RADIAN_PRE_DEGREE;
           best_position_ = Eigen::Vector2i(u, v);
         }
       }
@@ -191,7 +194,7 @@ void MicvisionLocation::scoreLaserScanSamples() {
   init_pose.pose.pose.position.z = 0;
 
   init_pose.pose.pose.orientation =
-      tf::createQuaternionMsgFromYaw(best_angle_);
+      tf::createQuaternionMsgFromYaw(best_angle_ * M_PI / 180);
   init_pose.pose.covariance = {0.25, 0.0, 0.0, 0.0, 0.0, 0.0,
                                0.0, 0.25, 0.0, 0.0, 0.0, 0.0,
                                0.0,  0.0, 0.0, 0.0, 0.0, 0.0,
@@ -203,38 +206,22 @@ void MicvisionLocation::scoreLaserScanSamples() {
 
 
   ROS_INFO("Best score: %f, angle: %f, Best position: %f, %f, count: %d",
-           score, best_angle_*180/M_PI, x, y, count);
+           score, best_angle_/RADIAN_PRE_DEGREE, x, y, count);
 }
 
 double MicvisionLocation::scoreASample(const LaserScanSample& sample,
                                        const int u, const int v) {
   double score = 0;
-  /*
-   *  int N = 20;
-   *  int step = sample.point_cloud.size()/N;
-   *
-   *  int no_object = 0;
-   *  for ( int i = 0; i < sample.point_cloud.size(); i+=step) {
-   *    auto t = current_map_.getRawData(sample.point_cloud[i][0]+v,
-   *                                     sample.point_cloud[i][1]+u);
-   *    if ( t > 50 )
-   *      score += t;
-   *    else
-   *      no_object++;
-   *
-   *    if ( no_object >= N/3 )
-   *      return 0;
-   *  }
-   */
-  int N = 8;
-  int step = sample.point_cloud.size() / N;
-  int object = 0;
-  for ( int i = 0; i < sample.point_cloud.size(); i+=step ) {
-    if ( current_map_.getRawData(sample.point_cloud[i][0]+v,
-                                 sample.point_cloud[i][1]+u) >= 50 )
-      object++;
+  if ( quick_score_ ) {
+    int step = sample.point_cloud.size() / N_;
+    int object = 0;
+    for ( int i = 0; i < sample.point_cloud.size(); i+=step ) {
+      if ( current_map_.getRawData(sample.point_cloud[i][0]+v,
+                                   sample.point_cloud[i][1]+u) >= 50 )
+        object++;
+    }
+    if ( object <= N_/2 ) return 0;
   }
-  if ( object <= N/2 ) return 0;
   for ( auto s:sample.point_cloud ) {
     // s = [width, height, z]
     score += current_map_.getRawData(s[0]+v, s[1]+u);
@@ -398,7 +385,7 @@ void MicvisionLocation::enqueueObstacle(const unsigned int index,
 inline double MicvisionLocation::distanceLookup(const unsigned int mx,
                                                 const unsigned int my,
                                                 const unsigned int sx,
-                                                const unsigned int sy) {
+                                                const unsigned int sy) const {
   const unsigned int dx = abs(static_cast<int>(mx) - static_cast<int>(sx));
   const unsigned int dy = abs(static_cast<int>(my) - static_cast<int>(sy));
 
@@ -414,7 +401,7 @@ inline double MicvisionLocation::distanceLookup(const unsigned int mx,
 inline signed char MicvisionLocation::costLookup(const unsigned int mx,
                                                  const unsigned int my,
                                                  const unsigned int sx,
-                                                 const unsigned int sy) {
+                                                 const unsigned int sy) const {
   const unsigned int dx = abs(static_cast<int>(mx) - static_cast<int>(sx));
   const unsigned int dy = abs(static_cast<int>(my) - static_cast<int>(sy));
 
