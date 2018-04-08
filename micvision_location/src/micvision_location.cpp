@@ -179,7 +179,7 @@ void MicvisionLocation::scoreLaserScanSamples() {
           for ( int point_index = 0; point_index < sample_size;
                point_index += step ) {
             if ( inflated_map_data_[sample.indices[point_index]
-                + uv].second >= 50 )
+                + uv].second >= 0.5 )
               ++object;
           }
 
@@ -190,7 +190,7 @@ void MicvisionLocation::scoreLaserScanSamples() {
 
         for ( auto point_index : sample.indices )
           sample_score += inflated_map_data_[point_index + uv].second;
-        sample_score /= static_cast<double>(sample_size) * 100.0;
+        sample_score /= static_cast<double>(sample_size);
 
         if ( sample_score > score ) {
           score = sample_score;
@@ -370,10 +370,16 @@ void MicvisionLocation::inflateMap() {
       const auto data = current_map_.getData(v, u);
       if ( data >= 0 && data < 50 )
       {
-        inflated_map_data_.emplace_back(std::make_pair(true, data));
+        inflated_map_data_.emplace_back(
+            std::make_pair(true,
+                           static_cast<double>(data) /
+                           static_cast<double>(cost_obstacle_)));
       }
       else
-        inflated_map_data_.emplace_back(std::make_pair(false, data));
+        inflated_map_data_.emplace_back(
+            std::make_pair(false,
+                           static_cast<double>(data) /
+                           static_cast<double>(cost_obstacle_)));
       /*
        *inflated_map_data_.emplace_back(
        *    std::make_pair(data >= 0 && data < 50, data));
@@ -459,7 +465,7 @@ void MicvisionLocation::debugAPosition(const geometry_msgs::Pose2D &pose) {
   for ( const auto point_index : sample.indices )
     score += inflated_map_data_[point_index + uv].second;
 
-  score /= static_cast<double>(sample.indices.size()) * 100.0;
+  score /= static_cast<double>(sample.indices.size());
 
   ROS_INFO("Position: [%f, %f], angle: %f, score: %f",
            pose.x, pose.y, pose.theta, score);

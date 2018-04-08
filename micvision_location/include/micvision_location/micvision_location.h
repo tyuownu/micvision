@@ -134,7 +134,7 @@ class MicvisionLocation {
     /// the inflated map we got
     GridMap current_map_;
     // for quick search
-    std::vector<std::pair<bool, signed char> > inflated_map_data_;
+    std::vector<std::pair<bool, double> > inflated_map_data_;
     int width_, height_;
     double resolution_;
 
