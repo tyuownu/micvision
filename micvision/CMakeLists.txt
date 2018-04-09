@@ -14,6 +14,10 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   sensor_msgs
   dynamic_reconfigure
+  actionlib
+  actionlib_msgs
+  move_base_msgs
+  tf
 )
 
 find_package(Eigen3 REQUIRED)
@@ -67,14 +71,15 @@ add_definitions(${EIGEN3_DEFINITIONS})
 # )
 
 ## Generate actions in the 'action' folder
-# add_action_files(
-#   FILES
-#   Location.action
-# )
+add_action_files(
+  FILES
+  Exploration.action
+)
 
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
+  actionlib_msgs
   geometry_msgs
 )
 
@@ -109,7 +114,13 @@ generate_dynamic_reconfigure_options(
 catkin_package(
   INCLUDE_DIRS include
 #  LIBRARIES micvision_location
-  CATKIN_DEPENDS  roscpp geometry_msgs dynamic_reconfigure
+  CATKIN_DEPENDS
+  roscpp
+  geometry_msgs
+  dynamic_reconfigure
+  actionlib
+  actionlib_msgs
+  tf
 )
 
 ###########
@@ -128,6 +139,9 @@ include_directories(
 add_library(${PROJECT_NAME}_location
   src/location.cpp
 )
+add_library(${PROJECT_NAME}_exploration
+  src/exploration.cpp
+)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -137,15 +151,35 @@ add_library(${PROJECT_NAME}_location
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(${PROJECT_NAME}_location_node src/location_node.cpp)
+add_executable(${PROJECT_NAME}_location_node
+    src/location_node.cpp)
+add_executable(${PROJECT_NAME}_exploration_node src/exploration_node.cpp
+    src/exploration.cpp)
+add_executable(${PROJECT_NAME}_exploration_client
+    src/exploration_client.cpp)
 ## add_executable(location_client src/location_client.cpp)
 
-add_dependencies(${PROJECT_NAME}_location ${catkin_EXPORTED_TARGETS})
-add_dependencies(${PROJECT_NAME}_location_node ${catkin_EXPORTED_TARGETS})
+add_dependencies(${PROJECT_NAME}_location
+    ${catkin_EXPORTED_TARGETS})
+add_dependencies(${PROJECT_NAME}_location_node
+    ${catkin_EXPORTED_TARGETS})
+add_dependencies(${PROJECT_NAME}_exploration
+    ${catkin_EXPORTED_TARGETS})
+add_dependencies(${PROJECT_NAME}_exploration_node
+    ${catkin_EXPORTED_TARGETS})
+add_dependencies(${PROJECT_NAME}_exploration_client
+    ${catkin_EXPORTED_TARGETS})
 ## add_dependencies(location_client ${catkin_EXPORTED_TARGETS})
 
-target_link_libraries(${PROJECT_NAME}_location_node ${PROJECT_NAME}_location ${catkin_LIBRARIES}
-  ${EIGEN3_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}_location_node
+    ${PROJECT_NAME}_location
+    ${catkin_LIBRARIES}
+    ${EIGEN3_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}_exploration ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}_exploration_node
+    ${PROJECT_NAME}_exploration ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}_exploration_client
+    ${catkin_LIBRARIES})
 ## target_link_libraries(location_client ${catkin_LIBRARIES})
 
 
@@ -179,7 +213,12 @@ target_link_libraries(${PROJECT_NAME}_location_node ${PROJECT_NAME}_location ${c
 # )
 
 ## Mark executables and/or libraries for installation
-install(TARGETS ${PROJECT_NAME}_location ${PROJECT_NAME}_location_node
+install(TARGETS
+    ${PROJECT_NAME}_location
+    ${PROJECT_NAME}_location_node
+    ${PROJECT_NAME}_exploration
+    ${PROJECT_NAME}_exploration_node
+    ${PROJECT_NAME}_exploration_client
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

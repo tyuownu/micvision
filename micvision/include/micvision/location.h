@@ -11,11 +11,11 @@
 #include <actionlib/client/simple_action_client.h>
 #include <std_srvs/Trigger.h>
 #include <geometry_msgs/Pose2D.h>
+#include <dynamic_reconfigure/server.h>
 
 // micvision_location
 #include <micvision/commands.h>
 #include <micvision/grid_map.h>
-#include <dynamic_reconfigure/server.h>
 #include <micvision/LocationConfig.h>
 
 
