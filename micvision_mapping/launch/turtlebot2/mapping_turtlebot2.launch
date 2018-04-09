@@ -1,5 +1,5 @@
 <launch>
   <include file="$(find micvision_mapping)/launch/turtlebot2/cartographer_turtlebot2.launch" />
   <include file="$(find micvision_mapping)/launch/turtlebot2/hardware_turtlebot2.launch" />
-  <include file="$(find nearest_frontier_planner)/launch/nearest_frontier_planner.launch" />
+  <include file="$(find micvision)/launch/exploration.launch" />
 </launch>
