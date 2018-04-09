@@ -13,11 +13,10 @@
 #include <geometry_msgs/Pose2D.h>
 
 // micvision_location
-// #include <micvision_location/LocationAction.h>
-#include <micvision_location/commands.h>
-#include <micvision_location/grid_map.h>
+#include <micvision/commands.h>
+#include <micvision/grid_map.h>
 #include <dynamic_reconfigure/server.h>
-#include <micvision_location/LocationConfig.h>
+#include <micvision/LocationConfig.h>
 
 
 // std
@@ -34,7 +33,7 @@ constexpr double PI_2 = 2*M_PI;
 constexpr double RADIAN_PRE_DEGREE = M_PI/180;
 typedef std::vector<Eigen::Vector3f> PointCloud;
 typedef std::vector<Eigen::Vector2i> PointCloudUV;
-typedef micvision_location::LocationConfig Config;
+typedef micvision::LocationConfig Config;
 typedef dynamic_reconfigure::Server<Config> LocationConfigServer;
 typedef dynamic_reconfigure::Server<Config>::CallbackType CallbackType;
 

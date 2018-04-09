@@ -1,5 +1,4 @@
-#include <micvision_location/micvision_location.h>
-// #include <micvision_location/computed_map.h>
+#include <micvision/location.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <tf/transform_listener.h>
 

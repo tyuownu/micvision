@@ -1,5 +1,5 @@
 #include <ros/ros.h>
-#include <micvision_location/micvision_location.h>
+#include <micvision/location.h>
 
 int main(int argc, char **argv)
 {
