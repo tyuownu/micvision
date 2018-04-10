@@ -114,7 +114,7 @@ MicvisionExploration::MicvisionExploration() {
                              this, _1), false);
   exploration_action_server_->start();
 
-  has_new_map_ = false;
+  receive_new_map_ = true;
   is_stopped_ = false;
   is_paused_ = false;
   goal_publisher_ = robot_node.advertise<geometry_msgs::PoseStamped>(
@@ -172,11 +172,13 @@ void MicvisionExploration::receiveExplorationGoal(
   ros::Rate long_rate(0.2);
   while ( true ) {
     // Check if we are asked to preempt
+    receive_new_map_ = false;
     if ( !ros::ok() || exploration_action_server_->isPreemptRequested()
         || is_stopped_ ) {
       ROS_INFO("Exploration has been preempted externally.");
       exploration_action_server_->setPreempted();
       stop();
+      receive_new_map_ = true;
       return;
     }
 
@@ -185,6 +187,7 @@ void MicvisionExploration::receiveExplorationGoal(
       ROS_ERROR("Exploration failed, could not get current position.");
       exploration_action_server_->setAborted();
       stop();
+      receive_new_map_ = true;
       return;
     }
 
@@ -256,7 +259,7 @@ void MicvisionExploration::receiveExplorationGoal(
         long_rate.sleep();
       }
     }
-    has_new_map_ = false;
+    receive_new_map_ = true;
 
     // Sleep remaining time
     ros::spinOnce();
@@ -283,10 +286,8 @@ bool MicvisionExploration::setCurrentPosition() {
   unsigned int i;
 
   if ( !current_map_.getIndex(robot_pixel_, i) ) {
-    if ( has_new_map_ || !current_map_.getIndex(robot_pixel_, i) ) {
-      ROS_ERROR("Is the robot out of the map?");
-      return false;
-    }
+    ROS_ERROR("Is the robot out of the map?");
+    return false;
   }
   start_index_ = i;
   return true;
@@ -294,10 +295,9 @@ bool MicvisionExploration::setCurrentPosition() {
 
 void MicvisionExploration::mapCallback(
     const nav_msgs::OccupancyGrid& global_map) {
-  if ( !has_new_map_ ) {
+  if ( receive_new_map_ ) {
     current_map_.update(global_map);
     current_map_.setLethalCost(80);
-    has_new_map_ = true;
   }
 }
 

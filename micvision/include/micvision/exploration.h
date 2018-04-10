@@ -61,7 +61,7 @@ class MicvisionExploration
   Server* exploration_action_server_;
 
   // Current status and goals
-  bool has_new_map_;
+  bool receive_new_map_;
   bool is_paused_;
   bool is_stopped_;
   unsigned int goal_index_;
