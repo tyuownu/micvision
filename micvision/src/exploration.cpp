@@ -328,4 +328,36 @@ int MicvisionExploration::scoreLine(double angle, double range) {
   // TODO: to be fulfill
   return 0;
 }
+
+std::vector<Pixel> MicvisionExploration::bresenham(const Pixel& end) {
+  int x = 0, y = 0;
+  int dx = abs(end(0) - x);
+  int dy = abs(end(1) - y);
+
+  const int ux = end(0) > x ? 1 : -1;
+  const int uy = end(1) > y ? 1 : -1;
+
+  bool exchange = false;      // exchange dx and dy?
+  if ( dy > dx ) {
+    std::swap(dx, dy);
+    exchange = true;
+  }
+
+  int p = 2 * dy - dx;
+  std::vector<Pixel> result;
+
+  for ( int i = 0; i <= dx; ++i ) {
+    result.push_back(Pixel(x, y));
+    if ( p >= 0 ) {
+      if ( !exchange ) y += uy;
+      else x += ux;
+      p -= 2*dx;
+    }
+
+    if ( !exchange ) x += ux;
+    else y += uy;
+    p += 2*dy;
+  }
+  return result;
+}
 }  // end namespace micvision

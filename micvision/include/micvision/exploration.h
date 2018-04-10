@@ -45,6 +45,10 @@ class MicvisionExploration
   void stop();
   bool preparePlan();
 
+  // start pixel is [0, 0]
+  std::vector<Pixel> bresenham(const Pixel& end);
+
+ private:
   // Everything related to ROS
   tf::TransformListener tf_listener_;
   ros::ServiceServer stop_server_;
