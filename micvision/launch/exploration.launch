@@ -2,7 +2,7 @@
 
 
   <!-- Start the Navigator to move the robot autonomously -->
-  <node name="exploration_node" pkg="micvision" type="micvision_exploration_node">
+  <node name="exploration_node" pkg="micvision" type="micvision_exploration_node" output="screen">
     <param name="update_frequency" value="2"/>
     <param name="map_frame" value="map" />
     <param name="robot_frame" value="base_link" />
