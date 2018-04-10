@@ -14,6 +14,7 @@
 
 #include <move_base_msgs/MoveBaseAction.h>
 
+#include <Eigen/Core>
 
 namespace micvision {
 
@@ -27,6 +28,7 @@ class MicvisionExploration
   MicvisionExploration();
   ~MicvisionExploration();
 
+ private:
   bool receiveStop(std_srvs::Trigger::Request &req,
                    std_srvs::Trigger::Response &res);
   bool receivePause(std_srvs::Trigger::Request &req,
@@ -36,8 +38,9 @@ class MicvisionExploration
   void mapCallback(const nav_msgs::OccupancyGrid& global_map);
   void scanCallback(const sensor_msgs::LaserScan& scan);
   int scoreLine(double, double);
+  Pixel world2pixel(const Point& point) const;
+  Point pixel2world(const Pixel& pixel) const;
 
- private:
   bool setCurrentPosition();
   void stop();
   bool preparePlan();
@@ -57,8 +60,8 @@ class MicvisionExploration
   bool has_new_map_;
   bool is_paused_;
   bool is_stopped_;
-  unsigned int goal_point_;
-  unsigned int start_point_;
+  unsigned int goal_index_;
+  unsigned int start_index_;
   double update_frequency_;
 
   double longest_distance_;
@@ -70,6 +73,9 @@ class MicvisionExploration
   ros::Publisher goal_publisher_;
   ros::Subscriber map_sub_;
   ros::Subscriber scan_sub_;
+
+  Pixel robot_pixel_;
+  Point robot_point_;
 };
 }  // end namespace micvision
 #endif  // end MICVISION_EXPLORATION_H_

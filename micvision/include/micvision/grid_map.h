@@ -3,6 +3,11 @@
 
 #include "ros/ros.h"
 #include "nav_msgs/OccupancyGrid.h"
+#include <Eigen/Core>
+
+namespace micvision {
+using Point = Eigen::Vector2f;
+using Pixel = Eigen::Vector2i;
 
 class GridMap {
  public:
@@ -13,31 +18,41 @@ class GridMap {
     ROS_DEBUG("Got new map of size %d x %d", map_width_, map_height_);
   }
 
-  unsigned int getWidth() {return map_width_;}
-  unsigned int getHeight() {return map_height_;}
-  unsigned int getSize() {return map_width_ * map_height_;}
-  double getResolution() {return occupancy_grid_.info.resolution;}
-  double getOriginX() {return occupancy_grid_.info.origin.position.x;}
-  double getOriginY() {return occupancy_grid_.info.origin.position.y;}
+  unsigned int getWidth() const {return map_width_;}
+  unsigned int getHeight() const {return map_height_;}
+  unsigned int getSize() const {return map_width_ * map_height_;}
+  double getResolution() const {return occupancy_grid_.info.resolution;}
+  double getOriginX() const {return occupancy_grid_.info.origin.position.x;}
+  double getOriginY() const {return occupancy_grid_.info.origin.position.y;}
 
-  signed char getLethalCost() {return lethal_cost_;}
+  signed char getLethalCost() const {return lethal_cost_;}
   void setLethalCost(signed char c) {lethal_cost_ = c;}
 
   const nav_msgs::OccupancyGrid& getMap() const {return occupancy_grid_;}
 
   // Get the array index from the given x,y coordinates
-  bool getIndex(const unsigned int x, const unsigned int y, unsigned int &i) {
+  bool getIndex(const unsigned int x,
+                const unsigned int y,
+                unsigned int &i) const {
     if ( x >= map_width_ || y >= map_height_ ) {
       return false;
     }
     i = y * map_width_ + x;
     return true;
   }
-  
+
+  bool getIndex(const Pixel& pixel, unsigned int &i) const {
+    const auto x = pixel(0);
+    const auto y = pixel(1);
+    return getIndex(x, y, i);
+  }
+
   // Get the x,y coordinates from the given array index
-  bool getCoordinates(unsigned int &x, unsigned int &y, const unsigned int i) {
+  bool getCoordinates(unsigned int &x,
+                      unsigned int &y,
+                      const unsigned int i) const {
     if ( i >= map_width_ * map_height_ ) {
-      ROS_ERROR("getCoords() failed!");
+      ROS_ERROR("getCoordinates() failed!");
       return false;
     }
     y = i / map_width_;
@@ -45,8 +60,17 @@ class GridMap {
     return true;
   }
 
+  bool getCoordinates(Pixel& pixel, const unsigned int i) const {
+    if ( i >= map_width_ * map_height_ ) {
+      ROS_ERROR("getCoordinates() failed!");
+      return false;
+    }
+    pixel = Pixel(i%map_width_, i/map_width_);
+    return true;
+  }
+
   // Index based methods
-  signed char getData(unsigned int index) {
+  signed char getData(unsigned int index) const {
     if ( index < map_width_ * map_height_ )
       return occupancy_grid_.data[index];
     else
@@ -61,13 +85,13 @@ class GridMap {
     return true;
   }
 
-  bool isFree(unsigned int index) {
+  bool isFree(unsigned int index) const {
     signed char value = getData(index);
     if ( value >= 0 && value < lethal_cost_ ) return true;
     return false;
   }
 
-  bool isFrontier(unsigned int index) {
+  bool isFrontier(unsigned int index) const {
     int y = index / map_width_;
     int x = index % map_width_;
 
@@ -85,7 +109,7 @@ class GridMap {
 
   /** Gets indices of all free neighboring cells with given offset */
   std::vector<unsigned int> getFreeNeighbors(unsigned int index,
-      int offset = 1) {
+                                             int offset = 1) const {
     std::vector<unsigned int> neighbors;
 
     if ( offset < 0 ) offset *= -1;
@@ -102,7 +126,7 @@ class GridMap {
 
   /** Gets indices of all neighboring cells */
   std::vector<unsigned int> getNeighbors(unsigned int index,
-      bool diagonal = false) {
+                                         bool diagonal = false) const {
     std::vector<unsigned int> neighbors;
 
     int y = index / map_width_;
@@ -123,15 +147,23 @@ class GridMap {
   }
 
   // Coordinate based methods
-  signed char getData(int x, int y) {
+  signed char getData(int x, int y) const {
     if ( x < 0 ||x >= (int)map_width_ || y < 0 || y >= (int)map_height_ )
       return 100;
     else
       return occupancy_grid_.data[y*map_width_ + x];
   }
 
-  double getRawData(int x, int y) {
+  signed char getData(const Pixel& pixel) const {
+    return getData(pixel(0), pixel(1));
+  }
+
+  signed char getRawData(int x, int y) const {
     return occupancy_grid_.data[y*map_width_ + x];
+  }
+
+  signed char getRawData(const Pixel& pixel) const {
+    return getRawData(pixel(0), pixel(1));
   }
 
   bool setData(int x, int y, signed char value) {
@@ -142,17 +174,25 @@ class GridMap {
     return true;
   }
 
-  bool isFree(int x, int y) {
+  bool setData(const Pixel& pixel, signed char value) {
+    return setData(pixel(0), pixel(1), value);
+  }
+
+  bool isFree(int x, int y) const {
     signed char value = getData(x, y);
     if ( value >= 0 && value < lethal_cost_ ) return true;
     return false;
   }
 
-  float getBoundaryX() {
+  bool isFree(const Pixel& pixel) const {
+    return isFree(pixel(0), pixel(1));
+  }
+
+  float getBoundaryX() const {
     return getOriginX() + getWidth() * getResolution();
   }
 
-  float getBoundaryY() {
+  float getBoundaryY() const {
     return getOriginY() + getHeight() * getResolution();
   }
 
@@ -162,5 +202,6 @@ class GridMap {
   unsigned int map_height_;
   signed char lethal_cost_;
 };
+}  // end namespace micvision
 
 #endif  // end MICVISION_GRID_MAP_H_
