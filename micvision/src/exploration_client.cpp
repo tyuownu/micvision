@@ -46,7 +46,7 @@ int main(int argc, char **argv)
   ros::NodeHandle n;
 
   ros::ServiceServer cmd_server =
-    n.advertiseService(EXPLORATION_SERVICE, &receiveCommand);
+    n.advertiseService(START_EXPLORATION_SERVICE, &receiveCommand);
   explore_client = new micvision::Client(EXPLORATION_ACTION, true);
   explore_client->waitForServer();
 

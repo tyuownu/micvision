@@ -93,8 +93,13 @@ MicvisionExploration::MicvisionExploration() {
       robot_node.advertiseService(STOP_SERVICE,
                                   &MicvisionExploration::receiveStop, this);
   pause_server_ =
-      robot_node.advertiseService(PAUSE_SERVICE,
+      robot_node.advertiseService(PAUSE_EXPLORATION_SERVICE,
                                   &MicvisionExploration::receivePause, this);
+
+  stop_exploration_server_ = 
+      robot_node.advertiseService(STOP_EXPLORATION_SERVICE,
+                                  &MicvisionExploration::receiveStopExploration,
+                                  this);
 
   ros::NodeHandle robot_node_pravite("~/");
 
@@ -119,6 +124,7 @@ MicvisionExploration::MicvisionExploration() {
   is_paused_ = false;
   goal_publisher_ = robot_node.advertise<geometry_msgs::PoseStamped>(
       "/move_base_simple/goal", 2);
+  stop_publisher_ = robot_node.advertise<actionlib_msgs::GoalID>("/move_base/cancel",2);
   map_sub_ = robot_node.subscribe("/move_base_node/global_costmap/costmap", 1,
                                   &MicvisionExploration::mapCallback, this);
   ros::Duration(1.0).sleep();
@@ -130,11 +136,26 @@ MicvisionExploration::~MicvisionExploration() {
   delete exploration_action_server_;
 }
 
+bool MicvisionExploration::receiveStopExploration(std_srvs::Trigger::Request &req,
+                                                  std_srvs::Trigger::Response &res) {
+  is_stopped_ = true;
+  res.success = true;
+  res.message = "Exploration received stop signal.";
+  return true;
+}
+
 bool MicvisionExploration::receiveStop(std_srvs::Trigger::Request &req,
                                        std_srvs::Trigger::Response &res) {
   is_stopped_ = true;
   res.success = true;
-  res.message = "Exploration received stop signal.";
+  res.message = "Navigator received stop signal.";
+
+  actionlib_msgs::GoalID stop_signal;
+  stop_signal.id = "";
+  stop_signal.stamp.sec = 0;
+  stop_signal.stamp.nsec = 0;
+  stop_publisher_.publish(stop_signal);
+
   return true;
 }
 

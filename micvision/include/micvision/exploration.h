@@ -31,6 +31,8 @@ class MicvisionExploration
  private:
   bool receiveStop(std_srvs::Trigger::Request &req,
                    std_srvs::Trigger::Response &res);
+  bool receiveStopExploration(std_srvs::Trigger::Request &req,
+                              std_srvs::Trigger::Response &res);
   bool receivePause(std_srvs::Trigger::Request &req,
                     std_srvs::Trigger::Response &res);
   void receiveExplorationGoal(
@@ -53,6 +55,7 @@ class MicvisionExploration
   tf::TransformListener tf_listener_;
   ros::ServiceServer stop_server_;
   ros::ServiceServer pause_server_;
+  ros::ServiceServer stop_exploration_server_;
 
   std::string map_frame_;
   std::string robot_frame_;
@@ -75,6 +78,7 @@ class MicvisionExploration
   GridMap current_map_;
 
   ros::Publisher goal_publisher_;
+  ros::Publisher stop_publisher_;
   ros::Subscriber map_sub_;
   ros::Subscriber scan_sub_;
 
