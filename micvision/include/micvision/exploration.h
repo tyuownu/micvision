@@ -31,6 +31,8 @@ class MicvisionExploration
  private:
   bool receiveStop(std_srvs::Trigger::Request &req,
                    std_srvs::Trigger::Response &res);
+  bool receiveStopExploration(std_srvs::Trigger::Request &req,
+                              std_srvs::Trigger::Response &res);
   bool receivePause(std_srvs::Trigger::Request &req,
                     std_srvs::Trigger::Response &res);
   void receiveExplorationGoal(
@@ -48,11 +50,16 @@ class MicvisionExploration
   // start pixel is [0, 0]
   std::vector<Pixel> bresenham(const Pixel& end);
 
+  bool findSector();
+  void searchDeeper();
+  void updateGoalCoordinates(const unsigned int&);
+
  private:
   // Everything related to ROS
   tf::TransformListener tf_listener_;
   ros::ServiceServer stop_server_;
   ros::ServiceServer pause_server_;
+  ros::ServiceServer stop_exploration_server_;
 
   std::string map_frame_;
   std::string robot_frame_;
@@ -71,10 +78,18 @@ class MicvisionExploration
   double longest_distance_;
   double angles_;
 
+  Point goal_point_;
+  unsigned int count_;
+  unsigned int interval_;
+  double angle_increment_;
+  double angle_min_;
+  sensor_msgs::LaserScan scan_;
+
   // Everything related to the global map and plan
   GridMap current_map_;
 
   ros::Publisher goal_publisher_;
+  ros::Publisher stop_publisher_;
   ros::Subscriber map_sub_;
   ros::Subscriber scan_sub_;
 

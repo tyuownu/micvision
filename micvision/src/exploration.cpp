@@ -4,11 +4,16 @@
 
 #include <set>
 #include <map>
+#include <limits>
+#include <mutex>
 
 
 namespace micvision {
 using Queue = std::multimap<double, unsigned int>;
 using Entry = std::pair<double, unsigned int>;
+
+// mutex
+std::mutex mtx;
 
 constexpr int EXPLORATION_TARGET_SET = 1;
 constexpr int EXPLORATION_FINISHED = 2;
@@ -19,7 +24,12 @@ int findExplorationTarget(GridMap* map,
                           unsigned int &goal) {
   // Create some workspace for the wavefront algorithm
   const unsigned int map_size = map->getSize();
-  double* plan = new double[map_size];
+  double* plan;
+  try {
+      plan = new double[map_size];
+  } catch(const std::bad_alloc&) {
+     return -10;   // allocate failure
+  }
   for ( unsigned int i = 0; i < map_size; i++ ) {
     plan[i] = -1;
   }
@@ -93,8 +103,13 @@ MicvisionExploration::MicvisionExploration() {
       robot_node.advertiseService(STOP_SERVICE,
                                   &MicvisionExploration::receiveStop, this);
   pause_server_ =
-      robot_node.advertiseService(PAUSE_SERVICE,
+      robot_node.advertiseService(PAUSE_EXPLORATION_SERVICE,
                                   &MicvisionExploration::receivePause, this);
+
+  stop_exploration_server_ =
+      robot_node.advertiseService(STOP_EXPLORATION_SERVICE,
+                                  &MicvisionExploration::receiveStopExploration,
+                                  this);
 
   ros::NodeHandle robot_node_pravite("~/");
 
@@ -119,22 +134,42 @@ MicvisionExploration::MicvisionExploration() {
   is_paused_ = false;
   goal_publisher_ = robot_node.advertise<geometry_msgs::PoseStamped>(
       "/move_base_simple/goal", 2);
+  stop_publisher_ = robot_node.advertise<actionlib_msgs::GoalID>("/move_base/cancel", 2);
   map_sub_ = robot_node.subscribe("/move_base_node/global_costmap/costmap", 1,
                                   &MicvisionExploration::mapCallback, this);
   ros::Duration(1.0).sleep();
-  scan_sub_ = robot_node.subscribe("/base_scan", 1,
+  scan_sub_ = robot_node.subscribe("/scan", 1,
                                    &MicvisionExploration::scanCallback, this);
+  count_ = 0;
+  interval_ = 16;
+  goal_point_(0) = 100;
+  goal_point_(1) = 100;
 }
 
 MicvisionExploration::~MicvisionExploration() {
   delete exploration_action_server_;
 }
 
+bool MicvisionExploration::receiveStopExploration(std_srvs::Trigger::Request &req,
+                                                  std_srvs::Trigger::Response &res) {
+  is_stopped_ = true;
+  res.success = true;
+  res.message = "Exploration received stop signal.";
+  return true;
+}
+
 bool MicvisionExploration::receiveStop(std_srvs::Trigger::Request &req,
                                        std_srvs::Trigger::Response &res) {
   is_stopped_ = true;
   res.success = true;
-  res.message = "Exploration received stop signal.";
+  res.message = "Navigator received stop signal.";
+
+  actionlib_msgs::GoalID stop_signal;
+  stop_signal.id = "";
+  stop_signal.stamp.sec = 0;
+  stop_signal.stamp.nsec = 0;
+  stop_publisher_.publish(stop_signal);
+
   return true;
 }
 
@@ -181,86 +216,52 @@ void MicvisionExploration::receiveExplorationGoal(
       receive_new_map_ = true;
       return;
     }
+    mtx.lock();
+    // to get the current map coordinates of the last goal,then we can determine whether it is spotted
+    Pixel goal_pixel;
+    goal_pixel = world2pixel(goal_point_);
 
-    // Where are we now
-    if ( !setCurrentPosition() ) {
-      ROS_ERROR("Exploration failed, could not get current position.");
-      exploration_action_server_->setAborted();
-      stop();
-      receive_new_map_ = true;
-      return;
-    }
-
-    goal_index_ = current_map_.getSize();
-    if ( preparePlan() ) {
-      ROS_INFO("exploration: start = %u, end = %u.",
-               start_index_, goal_index_);
-      int result =
-          findExplorationTarget(&current_map_, start_index_, goal_index_);
-      ROS_INFO("exploration: start = %u, end = %u.",
-               start_index_, goal_index_);
-      ROS_INFO("start: x = %u, y = %u", robot_pixel_(0), robot_pixel_(1));
-      Pixel goal_pixel;
-
-      ROS_INFO("start: x = %f, y = %f", robot_point_(0), robot_point_(1));
-
-      Point goal_point;
-
-      bool no_vaild_goal = false;
-      if ( goal_index_ == current_map_.getSize() ) {
-        goal_point = robot_point_;
-      } else {
-        current_map_.getCoordinates(goal_pixel, goal_index_);
-        std::cout << "start: " << robot_pixel_(0)
-            << ", " << robot_pixel_(1) << ";  stop: "
-            << goal_pixel(0) << ", " << goal_pixel(1) << std::endl;
-
-        if ( PixelDistance(robot_pixel_, goal_pixel) <= 0.5 ) {
-          // TODO: what need to do is to optimize it
-          double x, y;
-          x = robot_pixel_(0) * current_map_.getResolution() +
-              current_map_.getOriginX() +
-              (longest_distance_ - 1) * cos(angles_);
-          std::cout << "x = " << x << ", boundx: "
-              << current_map_.getBoundaryX() << std::endl;
-          if ( x <= current_map_.getOriginX() )
-            x = current_map_.getOriginX() + 1;
-          else if ( x >= current_map_.getBoundaryX() )
-            x = current_map_.getBoundaryX() - 1;
-
-          y = robot_pixel_(1) * current_map_.getResolution() +
-              current_map_.getOriginY() +
-              (longest_distance_ - 1) * sin(angles_);
-          if ( y <= current_map_.getOriginY() )
-            y = current_map_.getOriginY() + 1;
-          else if ( y >= current_map_.getBoundaryX() )
-            y = current_map_.getBoundaryX() - 1;
-          goal_point << x, y;
-
-          no_vaild_goal = true;
-          ROS_INFO("longest_distance_: %f, angles_: %f",
-                   longest_distance_, angles_);
-        } else {
-          goal_point = pixel2world(goal_pixel);
-        }
+    if ( count_ == interval_ || current_map_.getData(goal_pixel) != -1 ) {
+      count_ = 0;
+      // Where are we now
+      if ( !setCurrentPosition() ) {
+        ROS_ERROR("Exploration failed, could not get current position.");
+        exploration_action_server_->setAborted();
+        stop();
+        receive_new_map_ = true;
+        return;
       }
-      ROS_INFO("goal: x = %f, y = %f", goal_point(0), goal_point(1));
 
-      geometry_msgs::PoseStamped posestamped_goal;
-      posestamped_goal.header.stamp = ros::Time::now();
-      posestamped_goal.header.frame_id = "map";
-      posestamped_goal.pose.position.x = goal_point(0);
-      posestamped_goal.pose.position.y = goal_point(1);
-      posestamped_goal.pose.orientation = tf::createQuaternionMsgFromYaw(0);
-      goal_publisher_.publish(posestamped_goal);
+      if ( preparePlan() ) {
+        int result =
+            findExplorationTarget(&current_map_, start_index_, goal_index_);
 
-      if ( no_vaild_goal ) {
-        ros::Rate long_rate(0.25 * 2 / longest_distance_);
-        long_rate.sleep();
+        if ( goal_index_ == current_map_.getSize() ) {
+          goal_point_ = robot_point_;
+        } else {
+          current_map_.getCoordinates(goal_pixel, goal_index_);
+          // if the distance between the goal and the robot position is lesser
+          // than a threshold, we look for a sector or search deeper.
+          if ( PixelDistance(robot_pixel_, goal_pixel) <= 40 ) {
+            if ( !findSector() )
+              searchDeeper();
+          } else {
+            goal_point_ = pixel2world(goal_pixel);
+          }
+        }
+
+        geometry_msgs::PoseStamped posestamped_goal;
+        posestamped_goal.header.stamp = ros::Time::now();
+        posestamped_goal.header.frame_id = "map";
+        posestamped_goal.pose.position.x = goal_point_(0);
+        posestamped_goal.pose.position.y = goal_point_(1);
+        posestamped_goal.pose.orientation = tf::createQuaternionMsgFromYaw(0);
+        goal_publisher_.publish(posestamped_goal);
       }
     }
     receive_new_map_ = true;
-
+    count_++;
+    mtx.unlock();
     // Sleep remaining time
     ros::spinOnce();
     loop_rate.sleep();
@@ -295,15 +296,24 @@ bool MicvisionExploration::setCurrentPosition() {
 
 void MicvisionExploration::mapCallback(
     const nav_msgs::OccupancyGrid& global_map) {
+  mtx.lock();
   if ( receive_new_map_ ) {
     current_map_.update(global_map);
     current_map_.setLethalCost(80);
   }
+  mtx.unlock();
 }
 
 void MicvisionExploration::scanCallback(const sensor_msgs::LaserScan& scan) {
   ROS_DEBUG("scanCallback");
   // TODO: to be fulfill
+  // to copy the scan and calculate some parameters of the laserScan
+  scan_ = scan;
+  angle_min_ = scan.angle_min;
+  angle_increment_ = scan.angle_increment;
+
+  // wrapping angle to [-pi .. pi]
+  angle_increment_ = fmod(angle_increment_ + 5*M_PI, 2*M_PI) - M_PI;
 }
 
 Pixel MicvisionExploration::world2pixel(const Point& point) const {
@@ -360,4 +370,178 @@ std::vector<Pixel> MicvisionExploration::bresenham(const Pixel& end) {
   }
   return result;
 }
+
+bool MicvisionExploration::findSector() {
+  const int inf_threshold = 4;
+  int inf_count = 0;
+  int start_i = 0, end_i = 0;
+  double sector_bound = 0.0;
+
+  tf::StampedTransform transform;
+  try {
+    tf_listener_.lookupTransform(map_frame_, robot_frame_,
+                                 ros::Time(0), transform);
+  } catch ( tf::TransformException ex ) {
+    ROS_ERROR("Could not get robot position: %s", ex.what());
+    return false;
+  }
+  double theta = getYaw(transform.getRotation());
+  bool sector_found = false;
+
+  Pixel start_pixel;
+
+  unsigned int length = 0;
+  if ( scan_.ranges[0] >= scan_.range_max 
+      || scan_.ranges[0] == std::numeric_limits<float>::infinity()) {
+    while ( scan_.ranges[start_i] >= scan_.range_max
+           || scan_.ranges[start_i] == std::numeric_limits<float>::infinity() ) {
+      start_i++;
+      inf_count++;
+    }
+    end_i = scan_.ranges.size() - 1;
+    while ( scan_.ranges[end_i] >= scan_.range_max
+           || scan_.ranges[end_i] == std::numeric_limits<float>::infinity() ) {
+      end_i--;
+      inf_count++;
+    }
+    if ( inf_count > inf_threshold ) {
+      const int step_length = 5;
+      const int step_max = 20;
+      unsigned int curr_index = 0;
+      unsigned int step_count = 1;
+      double direction = (start_i + end_i - scan_.ranges.size()) / 2 * angle_increment_
+                          + theta - M_PI;
+      current_map_.getCoordinates(start_pixel, start_index_);
+      current_map_.getIndex(start_pixel(0) + step_length * std::cos(direction),
+                            start_pixel(1) + step_length * std::sin(direction),
+                            curr_index);
+      // to determine the depth of the sector
+      while ( current_map_.isFrontier(curr_index) && step_count < step_max ) {
+        step_count++;
+        current_map_.getIndex(start_pixel(0) + step_length * step_count * std::cos(direction),
+                              start_pixel(1) + step_length * step_count * std::sin(direction),
+                              curr_index);
+      }
+      if ( step_count > 5 ) {
+        if ( scan_.ranges[end_i] > scan_.ranges[start_i] )
+          sector_bound = end_i * angle_increment_ + theta - M_PI;
+        else
+          sector_bound = start_i * angle_increment_ + theta - M_PI;
+        length = step_count * step_length;
+        sector_found = true;
+      }
+    }
+  }
+  start_i = end_i = inf_count = 0;
+  if ( !sector_found ) {
+    for ( int i = 0; i < scan_.ranges.size(); i++ ) {
+      if ( (scan_.ranges[i] >= scan_.range_max || scan_.ranges[i] == std::numeric_limits<float>::infinity())
+           && i < scan_.ranges.size() - 1 )
+        inf_count++;
+      else {
+        if ( inf_count > inf_threshold ) {
+          end_i = i;
+          double direction = (start_i + end_i) / 2 * angle_increment_ + theta - M_PI;
+          const int step_length = 5;
+          const int step_max = 20;
+          unsigned int curr_index = 0;
+          unsigned int step_count = 1;
+          current_map_.getCoordinates(start_pixel, start_index_);
+          current_map_.getIndex(start_pixel(0) + step_length * std::cos(direction),
+                                start_pixel(1) + step_length * std::sin(direction),
+                                curr_index);
+          // to determine the depth of the sector
+          while (current_map_.isFrontier(curr_index) && step_count < step_max) {
+            step_count++;
+            current_map_.getIndex(start_pixel(0) + step_length * step_count * std::cos(direction),
+                                  start_pixel(1) + step_length * step_count * std::sin(direction),
+                                  curr_index);
+          }
+          if ( step_count > 5 ) {
+            if ( scan_.ranges[start_i] >= scan_.range_max
+                || scan_.ranges[start_i] == std::numeric_limits<float>::infinity() ) {
+              start_i--;
+            } 
+            if ( scan_.ranges[end_i] > scan_.ranges[start_i] )
+              sector_bound = end_i * angle_increment_ + theta - M_PI;
+            else
+              sector_bound = start_i * angle_increment_ + theta - M_PI;
+            sector_found = true;
+            length = step_count * step_length;
+            break;
+          }
+        }
+        inf_count = 0;
+        start_i = i;
+      }
+    }
+  }
+  if ( sector_found ) {
+    current_map_.getIndex(start_pixel(0) + length * std::cos(sector_bound),
+                          start_pixel(1) + length * std::sin(sector_bound),
+                          goal_index_);
+    updateGoalCoordinates(goal_index_);
+    interval_ = 50;
+    return true;
+  }
+  else
+    return false;
+}
+
+void MicvisionExploration::searchDeeper() {
+  unsigned int ind[5];
+
+  ind[0] = goal_index_ - 1;                        // left
+  ind[1] = goal_index_ + 1;                        // right
+  ind[2] = goal_index_ - current_map_.getWidth();  // up
+  ind[3] = goal_index_ + current_map_.getWidth();  // down
+  ind[4] = goal_index_;                            // origin
+
+  int curr_longest = 0;
+  double best_direction = 0.0;
+  const int step_length = 5;
+  const int step_max = 10;
+  for ( int i = 0; i < 5; i++ ) {
+    unsigned int curr_index = ind[i];
+    if ( !current_map_.isFrontier(curr_index) )
+      continue;
+    Pixel start_pixel;
+    // to get the coordinates of the position of the robot
+    current_map_.getCoordinates(start_pixel, start_index_);
+    Pixel goal_pixel;
+    // to get the coordinates of the nearest frontier
+    current_map_.getCoordinates(goal_pixel, curr_index);
+    // to calculate the heading direction
+    double direction = std::atan2(int(goal_pixel(1)) - int(start_pixel(1)),
+                                  int(goal_pixel(0)) - int(start_pixel(0)));
+    // to search deeper
+    int step = 0;
+    unsigned int oldIndex = curr_index;
+    Pixel curr_pixel;
+    while ( current_map_.isFrontier(curr_index) && step < step_max ) {
+      step++;
+      oldIndex = curr_index;
+      current_map_.getCoordinates(curr_pixel, oldIndex);
+      current_map_.getIndex(curr_pixel(0) + step_length * std::cos(direction),
+                            curr_pixel(1) + step_length * std::sin(direction),
+                            curr_index);
+    }
+    int curr_distance = (curr_pixel(0) - start_pixel(0)) * (curr_pixel(0) - start_pixel(0))
+                         + (curr_pixel(1) - start_pixel(1)) * (curr_pixel(1) - start_pixel(1));
+    if ( curr_distance > curr_longest ) {
+      goal_index_ = oldIndex;
+      curr_longest = curr_distance;
+      best_direction = direction;
+    }
+  }
+  updateGoalCoordinates(goal_index_);
+  interval_ = 16;
+}
+
+void MicvisionExploration::updateGoalCoordinates(const unsigned int& goal) {
+  Pixel goal_pixel;
+  current_map_.getCoordinates(goal_pixel, goal);
+  goal_point_ = pixel2world(goal_pixel);
+}
+
 }  // end namespace micvision
