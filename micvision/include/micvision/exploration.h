@@ -50,6 +50,10 @@ class MicvisionExploration
   // start pixel is [0, 0]
   std::vector<Pixel> bresenham(const Pixel& end);
 
+  bool findSector();
+  void searchDeeper();
+  void updateGoalCoordinates(const unsigned int&);
+
  private:
   // Everything related to ROS
   tf::TransformListener tf_listener_;
@@ -73,6 +77,13 @@ class MicvisionExploration
 
   double longest_distance_;
   double angles_;
+
+  Point goal_point_;
+  unsigned int count_;
+  unsigned int interval_;
+  double angle_increment_;
+  double angle_min_;
+  sensor_msgs::LaserScan scan_;
 
   // Everything related to the global map and plan
   GridMap current_map_;
