@@ -16,14 +16,16 @@
 
 #include <Eigen/Core>
 
+#include <vector>
+#include <string>
+
 namespace micvision {
 
 using Action = micvision::ExplorationAction;
 using Server = actionlib::SimpleActionServer<Action>;
 using Client = actionlib::SimpleActionClient<Action>;
 
-class MicvisionExploration
-{
+class MicvisionExploration {
  public:
   MicvisionExploration();
   ~MicvisionExploration();
@@ -37,16 +39,16 @@ class MicvisionExploration
       const micvision::ExplorationGoal::ConstPtr &goal);
   void mapCallback(const nav_msgs::OccupancyGrid& global_map);
   void scanCallback(const sensor_msgs::LaserScan& scan);
-  int scoreLine(double, double);
   Pixel world2pixel(const Point& point) const;
   Point pixel2world(const Pixel& pixel) const;
 
   bool setCurrentPosition();
   void stop();
-  bool preparePlan();
 
   // start pixel is [0, 0]
   std::vector<Pixel> bresenham(const Pixel& end);
+  void findBestDirection();
+  // int safeIndex(int index) const;
 
  private:
   // Everything related to ROS
@@ -61,15 +63,12 @@ class MicvisionExploration
   Server* exploration_action_server_;
 
   // Current status and goals
-  bool receive_new_map_;
-  bool is_paused_;
-  bool is_stopped_;
-  unsigned int goal_index_;
-  unsigned int start_index_;
+  bool is_paused_ = false;
+  bool is_stopped_ = false;
+  unsigned int start_index_ = -1;
   double update_frequency_;
 
-  double longest_distance_;
-  double angles_;
+  double angles_ = -2*M_PI;
 
   // Everything related to the global map and plan
   GridMap current_map_;
@@ -77,9 +76,22 @@ class MicvisionExploration
   ros::Publisher goal_publisher_;
   ros::Subscriber map_sub_;
   ros::Subscriber scan_sub_;
+  ros::Publisher stop_publisher_;
 
-  Pixel robot_pixel_;
+  Pixel robot_pixel_ = Pixel(0, 0);
   Point robot_point_;
+  double robot_direction_ = 0;
+  // int directon_index_ = 0;
+  Pixel goal_pixel_ = Pixel(-1, -1);
+  Point goal_point_ = Point(-100.0f, -100.0f);
+
+  std::vector<int> indices_;
+
+  // scan relative
+  double angle_min_ = -M_PI,
+         angle_max_ =  M_PI,
+         angle_increment_ = M_PI / 180.0f;
+  int scan_size_ = 0;
 };
 }  // end namespace micvision
 #endif  // end MICVISION_EXPLORATION_H_
