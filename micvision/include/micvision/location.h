@@ -12,6 +12,7 @@
 #include <geometry_msgs/Pose2D.h>
 #include <dynamic_reconfigure/server.h>
 #include <tf/transform_listener.h>
+#include <nav_msgs/Odometry.h>
 
 // micvision_location
 #include <micvision/commands.h>
@@ -32,7 +33,7 @@ namespace micvision {
 constexpr double PI_2 = 2*M_PI;
 constexpr double RADIAN_PRE_DEGREE = M_PI/180;
 typedef std::vector<Eigen::Vector3f> PointCloud;
-typedef std::vector<Eigen::Vector2i> PointCloudUV;
+typedef std::vector<Pixel> PointCloudUV;
 typedef micvision::LocationConfig Config;
 typedef dynamic_reconfigure::Server<Config> LocationConfigServer;
 typedef dynamic_reconfigure::Server<Config>::CallbackType CallbackType;
@@ -100,6 +101,12 @@ class MicvisionLocation {
 
     void reconfigureCB(Config &config, uint32_t level);
 
+    bool validPosition(const int uv, const int index);
+
+    std::vector<Pixel> bresenham(const Pixel &start, const Pixel &end);
+
+    void odomCallback(const nav_msgs::Odometry &odom);
+
 
  private:
     bool has_new_map_ = true;
@@ -143,6 +150,7 @@ class MicvisionLocation {
     ros::Publisher position_publisher_;
     ros::Subscriber map_sub_;
     ros::Subscriber scan_sub_;
+    ros::Subscriber odom_sub_;
     ros::Subscriber debug_position_sub_;
     ros::ServiceServer location_server_;
 
@@ -166,6 +174,9 @@ class MicvisionLocation {
     std::string robot_frame_;
     double tracking_frequency_;
     double current_position_score_ = 0.0f;
+
+    // odom relative
+    bool big_angle_twist_ = false;
 };
 }  // namespace micvision
 #endif  // end MICVISION_LOCATION_H_
