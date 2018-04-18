@@ -7,6 +7,7 @@ int main(int argc, char **argv)
   ros::NodeHandle n;
   micvision::MicvisionLocation mic_location;
 
+  mic_location.tracking();
   ros::spin();
   return 0;
 }

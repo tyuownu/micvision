@@ -11,6 +11,7 @@
 #include <actionlib/client/simple_action_client.h>
 #include <geometry_msgs/Pose2D.h>
 #include <dynamic_reconfigure/server.h>
+#include <tf/transform_listener.h>
 
 // micvision_location
 #include <micvision/commands.h>
@@ -64,6 +65,7 @@ class MicvisionLocation {
 
     void debugAPosition(const geometry_msgs::Pose2D &pose);
 
+    void tracking();
  private:
     // private function
     void mapCallback(const nav_msgs::OccupancyGrid& map);
@@ -98,6 +100,8 @@ class MicvisionLocation {
 
     void reconfigureCB(Config &config, uint32_t level);
 
+
+ private:
     bool has_new_map_ = true;
     double inflation_radius_ = 0.3;
     unsigned int cell_inflation_radius_;
@@ -156,6 +160,12 @@ class MicvisionLocation {
     bool quick_score_ = true;
 
     LocationConfigServer *dynamic_srv_;
+
+    tf::TransformListener tf_listener_;
+    std::string map_frame_;
+    std::string robot_frame_;
+    double tracking_frequency_;
+    double current_position_score_ = 0.0f;
 };
 }  // namespace micvision
 #endif  // end MICVISION_LOCATION_H_
