@@ -19,7 +19,7 @@ LaserScanSample MicvisionLocation::transformPointCloud(
   const float resolution = current_map_.getResolution();
   int min_x = width_, max_x = -min_x;
   int min_y = height_, max_y = -min_y;
-  for ( const Eigen::Vector3f& point:point_cloud_ ) {
+  for ( const Eigen::Vector3f& point : point_cloud_ ) {
     // result.emplace_back(transform * point);
     const Eigen::Vector2i temp = floor(transform * point / resolution);
     min_x = min_x < temp[0] ? min_x : temp[0];
@@ -51,29 +51,9 @@ MicvisionLocation::MicvisionLocation() {
   nh.param("map_service", service_name, std::string("/static_map"));
   get_map_client_ = nh.serviceClient<nav_msgs::GetMap>(service_name);
 
-  // TODO: using parameter server
-  inflation_radius_ = 0.3;
-  robot_radius_ = 0.2;
-  cost_obstacle_ = 100;
-
-  has_new_map_ = true;
-  inflation_markers_ = NULL;
-  cached_distances_ = NULL;
-  cached_costs_ = NULL;
-
-  // laserscan relative
-  handling_lasescan_ = false;
-  laserscan_circle_step_ = 6;
-  range_step_ = 3;
-  laserscan_anglar_step_ = 6.0;   // degree
-
-  min_valid_range_ = 0.0;
-  max_valid_range_ = 10.0;
-  quick_score_num_ = 8;
-  quick_score_ = true;
-
   dynamic_srv_ = new LocationConfigServer(ros::NodeHandle("~"));
-  CallbackType cb = boost::bind(&MicvisionLocation::reconfigureCB, this, _1, _2);
+  CallbackType cb = boost::bind(&MicvisionLocation::reconfigureCB,
+                                this, _1, _2);
   dynamic_srv_->setCallback(cb);
 }
 
@@ -120,13 +100,12 @@ void MicvisionLocation::scanCallback(const sensor_msgs::LaserScan& scan) {
       const float range = scan.ranges[i];
       if ( min_valid_range_ <= range && range <= max_valid_range_ ) {
         const Eigen::AngleAxisf rotation(angle, Eigen::Vector3f::UnitZ());
-        point_cloud_.push_back(rotation*( range*Eigen::Vector3f::UnitX() ));
+        point_cloud_.push_back(rotation*(range*Eigen::Vector3f::UnitX()));
       }
 
       angle += scan.angle_increment * laserscan_circle_step_;
     }
     // handleLaserScan();
-
   }
 }
 
