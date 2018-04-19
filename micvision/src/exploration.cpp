@@ -132,17 +132,21 @@ MicvisionExploration::MicvisionExploration() {
   receive_new_map_ = true;
   is_stopped_ = false;
   is_paused_ = false;
-  goal_publisher_ = robot_node.advertise<geometry_msgs::PoseStamped>(
-      "/move_base_simple/goal", 2);
+  goal_publisher_ = robot_node.advertise<move_base_msgs::MoveBaseActionGoal/*geometry_msgs::PoseStamped*/>(
+      "/move_base/goal", 2);
   stop_publisher_ = robot_node.advertise<actionlib_msgs::GoalID>("/move_base/cancel", 2);
   map_sub_ = robot_node.subscribe("/move_base_node/global_costmap/costmap", 1,
                                   &MicvisionExploration::mapCallback, this);
   ros::Duration(1.0).sleep();
   scan_sub_ = robot_node.subscribe("/scan", 1,
                                    &MicvisionExploration::scanCallback, this);
+  extern_goal_sub_ = robot_node.subscribe("/move_base_simple/goal", 1, 
+                                          &MicvisionExploration::externGoalCallback,
+                                          this);
   count_ = 0;
   interval_ = 16;
   goal_point_ = Point(100.0, 100.0);
+  exploration_running_ = false;
 }
 
 MicvisionExploration::~MicvisionExploration() {
@@ -159,7 +163,9 @@ bool MicvisionExploration::receiveStopExploration(std_srvs::Trigger::Request &re
 
 bool MicvisionExploration::receiveStop(std_srvs::Trigger::Request &req,
                                        std_srvs::Trigger::Response &res) {
-  is_stopped_ = true;
+  if ( exploration_running_ ) {
+    is_stopped_ = true;
+  }
   res.success = true;
   res.message = "Navigator received stop signal.";
 
@@ -188,7 +194,10 @@ bool MicvisionExploration::receivePause(std_srvs::Trigger::Request &req,
 
 bool MicvisionExploration::preparePlan() {
   // Where am I?
-  if ( !setCurrentPosition() ) return false;
+  if ( !setCurrentPosition() ) {
+    exploration_running_ = false;
+    return false;
+}
 
   // Clear robot footprint in map
 
@@ -204,15 +213,16 @@ void MicvisionExploration::receiveExplorationGoal(
     const micvision::ExplorationGoal::ConstPtr &goal) {
   ros::Rate loop_rate(update_frequency_);
   ros::Rate long_rate(0.2);
+  exploration_running_ = true;
   while ( true ) {
     // Check if we are asked to preempt
     receive_new_map_ = false;
     if ( !ros::ok() || exploration_action_server_->isPreemptRequested()
         || is_stopped_ ) {
-      ROS_INFO("Exploration has been preempted externally.");
       exploration_action_server_->setPreempted();
       stop();
       receive_new_map_ = true;
+      exploration_running_ = false;
       return;
     }
     mtx.lock();
@@ -228,6 +238,8 @@ void MicvisionExploration::receiveExplorationGoal(
         exploration_action_server_->setAborted();
         stop();
         receive_new_map_ = true;
+        exploration_running_ = false;
+        mtx.unlock();
         return;
       }
 
@@ -247,14 +259,21 @@ void MicvisionExploration::receiveExplorationGoal(
             goal_point_ = pixel2world(goal_pixel);
           }
         }
-
+        
+        move_base_msgs::MoveBaseActionGoal move_base_action_goal;
+        move_base_action_goal.header.stamp  = ros::Time::now();
+        move_base_action_goal.goal_id.stamp.sec = 0;
+        move_base_action_goal.goal_id.stamp.nsec = 0;
+        move_base_action_goal.goal_id.id = "";
         geometry_msgs::PoseStamped posestamped_goal;
         posestamped_goal.header.stamp = ros::Time::now();
         posestamped_goal.header.frame_id = "map";
         posestamped_goal.pose.position.x = goal_point_(0);
         posestamped_goal.pose.position.y = goal_point_(1);
         posestamped_goal.pose.orientation = tf::createQuaternionMsgFromYaw(0);
-        goal_publisher_.publish(posestamped_goal);
+        move_base_action_goal.goal.target_pose = posestamped_goal;
+        if ( !is_stopped_ )
+          goal_publisher_.publish(move_base_action_goal/*posestamped_goal*/);
       }
     }
     receive_new_map_ = true;
@@ -317,6 +336,13 @@ Pixel MicvisionExploration::world2pixel(const Point& point) const {
        (point(1) - current_map_.getOriginY()) / current_map_.getResolution();
 
   return Pixel(p(0), p(1));
+}
+
+
+void MicvisionExploration::externGoalCallback(const geometry_msgs::PoseStamped& extern_goal) {
+  if ( exploration_running_ ) {
+    is_stopped_ = true;
+  }
 }
 
 Point MicvisionExploration::pixel2world(const Pixel& pixel) const {

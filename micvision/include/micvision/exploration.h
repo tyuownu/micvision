@@ -39,6 +39,7 @@ class MicvisionExploration
       const micvision::ExplorationGoal::ConstPtr &goal);
   void mapCallback(const nav_msgs::OccupancyGrid& global_map);
   void scanCallback(const sensor_msgs::LaserScan& scan);
+  void externGoalCallback(const geometry_msgs::PoseStamped&);
   int scoreLine(double, double);
   Pixel world2pixel(const Point& point) const;
   Point pixel2world(const Pixel& pixel) const;
@@ -84,6 +85,7 @@ class MicvisionExploration
   double angle_increment_;
   double angle_min_;
   sensor_msgs::LaserScan scan_;
+  bool exploration_running_;
 
   // Everything related to the global map and plan
   GridMap current_map_;
@@ -92,6 +94,7 @@ class MicvisionExploration
   ros::Publisher stop_publisher_;
   ros::Subscriber map_sub_;
   ros::Subscriber scan_sub_;
+  ros::Subscriber extern_goal_sub_;
 
   Pixel robot_pixel_;
   Point robot_point_;
