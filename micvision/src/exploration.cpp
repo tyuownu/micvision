@@ -7,10 +7,6 @@
 #include <limits>
 #include <mutex>
 
-#define DISTANCE_THRESHOLD      40      // threshold for the distance between the goal and robot position
-#define SEARCH_DEEPER_INTERVAL  16      // step interval for search deeper situation
-#define FIND_SECTOR_INTERVAL    50      // step interval for find sector situation
-
 namespace micvision {
 using Queue = std::multimap<double, unsigned int>;
 using Entry = std::pair<double, unsigned int>;
@@ -132,32 +128,26 @@ MicvisionExploration::MicvisionExploration() {
                              this, _1), false);
   exploration_action_server_->start();
 
-  receive_new_map_ = true;
-  is_stopped_ = false;
-  is_paused_ = false;
-  goal_publisher_ = robot_node.advertise<move_base_msgs::MoveBaseActionGoal/*geometry_msgs::PoseStamped*/>(
+  goal_publisher_ = robot_node.advertise<move_base_msgs::MoveBaseActionGoal>(
       "/move_base/goal", 2);
-  stop_publisher_ = robot_node.advertise<actionlib_msgs::GoalID>("/move_base/cancel", 2);
+  stop_publisher_ =
+      robot_node.advertise<actionlib_msgs::GoalID>("/move_base/cancel", 2);
   map_sub_ = robot_node.subscribe("/move_base_node/global_costmap/costmap", 1,
                                   &MicvisionExploration::mapCallback, this);
   ros::Duration(1.0).sleep();
   scan_sub_ = robot_node.subscribe("/scan", 1,
                                    &MicvisionExploration::scanCallback, this);
-  extern_goal_sub_ = robot_node.subscribe("/move_base_simple/goal", 1, 
-                                          &MicvisionExploration::externGoalCallback,
-                                          this);
-  count_ = 0;
-  interval_ = 16;
-  goal_point_ = Point(100.0, 100.0);
-  exploration_running_ = false;
+  extern_goal_sub_ =
+      robot_node.subscribe("/move_base_simple/goal", 1,
+                           &MicvisionExploration::externGoalCallback, this);
 }
 
 MicvisionExploration::~MicvisionExploration() {
   delete exploration_action_server_;
 }
 
-bool MicvisionExploration::receiveStopExploration(std_srvs::Trigger::Request &req,
-                                                  std_srvs::Trigger::Response &res) {
+bool MicvisionExploration::receiveStopExploration(
+    std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &res) {
   if ( exploration_running_ ) {
     is_stopped_ = true;
   }
@@ -218,7 +208,7 @@ void MicvisionExploration::receiveExplorationGoal(
     const micvision::ExplorationGoal::ConstPtr &goal) {
   ros::Rate loop_rate(update_frequency_);
   exploration_running_ = true;
-  // so we can search for a goal immediately 
+  // so we can search for a goal immediately
   count_ = interval_;
   while ( true ) {
     // Check if we are asked to preempt
@@ -232,7 +222,8 @@ void MicvisionExploration::receiveExplorationGoal(
       return;
     }
     mtx.lock();
-    // to get the current map coordinates of the last goal,then we can determine whether it is spotted
+    // to get the current map coordinates of the last goal,
+    // then we can determine whether it is spotted
     Pixel goal_pixel;
     goal_pixel = world2pixel(goal_point_);
 
@@ -266,7 +257,7 @@ void MicvisionExploration::receiveExplorationGoal(
             goal_point_ = pixel2world(goal_pixel);
           }
         }
-        
+
         move_base_msgs::MoveBaseActionGoal move_base_action_goal;
         move_base_action_goal.header.stamp  = ros::Time::now();
         move_base_action_goal.goal_id.stamp.sec = 0;
@@ -330,7 +321,6 @@ void MicvisionExploration::mapCallback(
 
 void MicvisionExploration::scanCallback(const sensor_msgs::LaserScan& scan) {
   ROS_DEBUG("scanCallback");
-  // TODO: to be fulfill
   // to copy the scan
   scan_ = scan;
 }
@@ -344,7 +334,8 @@ Pixel MicvisionExploration::world2pixel(const Point& point) const {
 }
 
 
-void MicvisionExploration::externGoalCallback(const geometry_msgs::PoseStamped& extern_goal) {
+void MicvisionExploration::externGoalCallback(
+    const geometry_msgs::PoseStamped& extern_goal) {
   if ( exploration_running_ ) {
     is_stopped_ = true;
   }
@@ -358,45 +349,6 @@ Point MicvisionExploration::pixel2world(const Pixel& pixel) const {
   return p;
 }
 
-
-int MicvisionExploration::scoreLine(double angle, double range) {
-  ROS_DEBUG("scoreLine");
-  // TODO: to be fulfill
-  return 0;
-}
-
-std::vector<Pixel> MicvisionExploration::bresenham(const Pixel& end) {
-  int x = 0, y = 0;
-  int dx = abs(end(0) - x);
-  int dy = abs(end(1) - y);
-
-  const int ux = end(0) > x ? 1 : -1;
-  const int uy = end(1) > y ? 1 : -1;
-
-  bool exchange = false;      // exchange dx and dy?
-  if ( dy > dx ) {
-    std::swap(dx, dy);
-    exchange = true;
-  }
-
-  int p = 2 * dy - dx;
-  std::vector<Pixel> result;
-
-  for ( int i = 0; i <= dx; ++i ) {
-    result.push_back(Pixel(x, y));
-    if ( p >= 0 ) {
-      if ( !exchange ) y += uy;
-      else x += ux;
-      p -= 2*dx;
-    }
-
-    if ( !exchange ) x += ux;
-    else y += uy;
-    p += 2*dy;
-  }
-  return result;
-}
-
 bool MicvisionExploration::findSector() {
   const int inf_threshold = 4;
   int inf_count = 0;
@@ -408,16 +360,15 @@ bool MicvisionExploration::findSector() {
   Pixel start_pixel;
 
   unsigned int length = 0;
-  if ( scan_.ranges[0] >= scan_.range_max 
-      || scan_.ranges[0] == std::numeric_limits<float>::infinity()) {
-    while ( scan_.ranges[start_i] >= scan_.range_max
-           || scan_.ranges[start_i] == std::numeric_limits<float>::infinity() ) {
+  if ( scan_.ranges[0] >= scan_.range_max || scan_.ranges[0] == Infinity ) {
+    while ( scan_.ranges[start_i] >= scan_.range_max ||
+           scan_.ranges[start_i] == Infinity ) {
       start_i++;
       inf_count++;
     }
     end_i = scan_.ranges.size() - 1;
-    while ( scan_.ranges[end_i] >= scan_.range_max
-           || scan_.ranges[end_i] == std::numeric_limits<float>::infinity() ) {
+    while ( scan_.ranges[end_i] >= scan_.range_max ||
+           scan_.ranges[end_i] == Infinity ) {
       end_i--;
       inf_count++;
     }
@@ -428,8 +379,8 @@ bool MicvisionExploration::findSector() {
       unsigned int curr_index = 0;
       unsigned int step_count = 1;
 
-      double direction = (start_i + end_i - scan_.ranges.size()) / 2 * scan_.angle_increment
-                          + robot_theta_ + scan_.angle_min;
+      const double direction = (start_i + end_i - scan_.ranges.size()) / 2 *
+          scan_.angle_increment + robot_theta_ + scan_.angle_min;
       current_map_.getCoordinates(start_pixel, start_index_);
       current_map_.getIndex(start_pixel(0) + step_length * std::cos(direction),
                             start_pixel(1) + step_length * std::sin(direction),
@@ -437,15 +388,18 @@ bool MicvisionExploration::findSector() {
       // to determine the depth of the sector
       while ( current_map_.isFrontier(curr_index) && step_count < step_max ) {
         step_count++;
-        current_map_.getIndex(start_pixel(0) + step_length * step_count * std::cos(direction),
-                              start_pixel(1) + step_length * step_count * std::sin(direction),
-                              curr_index);
+        current_map_.getIndex(
+            start_pixel(0) + step_length * step_count * std::cos(direction),
+            start_pixel(1) + step_length * step_count * std::sin(direction),
+            curr_index);
       }
       if ( step_count > sector_threshold ) {
         if ( scan_.ranges[end_i] > scan_.ranges[start_i] )
-          sector_bound = end_i * scan_.angle_increment + robot_theta_ + scan_.angle_min;
+          sector_bound = end_i * scan_.angle_increment +
+              robot_theta_ + scan_.angle_min;
         else
-          sector_bound = start_i * scan_.angle_increment + robot_theta_ + scan_.angle_min;
+          sector_bound = start_i * scan_.angle_increment +
+              robot_theta_ + scan_.angle_min;
         length = step_count * step_length;
         sector_found = true;
       }
@@ -454,38 +408,45 @@ bool MicvisionExploration::findSector() {
   start_i = end_i = inf_count = 0;
   if ( !sector_found ) {
     for ( int i = 0; i < scan_.ranges.size(); i++ ) {
-      if ( (scan_.ranges[i] >= scan_.range_max || scan_.ranges[i] == std::numeric_limits<float>::infinity())
-           && i < scan_.ranges.size() - 1 )
+      if ( (scan_.ranges[i] >= scan_.range_max ||
+            scan_.ranges[i] == Infinity) && i < scan_.ranges.size() - 1 ) {
         inf_count++;
-      else {
+      } else {
         if ( inf_count > inf_threshold ) {
           end_i = i;
-          double direction = (start_i + end_i) / 2 * scan_.angle_increment + robot_theta_ + scan_.angle_min;
+          const double direction =
+              (start_i + end_i) / 2 * scan_.angle_increment +
+              robot_theta_ + scan_.angle_min;
           const int step_length = 5;
           const int step_max = 20;
           const int sector_threshold = 5;
           unsigned int curr_index = 0;
           unsigned int step_count = 1;
           current_map_.getCoordinates(start_pixel, start_index_);
-          current_map_.getIndex(start_pixel(0) + step_length * std::cos(direction),
-                                start_pixel(1) + step_length * std::sin(direction),
-                                curr_index);
+          current_map_.getIndex(
+              start_pixel(0) + step_length * std::cos(direction),
+              start_pixel(1) + step_length * std::sin(direction),
+              curr_index);
           // to determine the depth of the sector
-          while ( current_map_.isFrontier(curr_index) && step_count < step_max) {
+          while ( current_map_.isFrontier(curr_index) &&
+                 step_count < step_max) {
             step_count++;
-            current_map_.getIndex(start_pixel(0) + step_length * step_count * std::cos(direction),
-                                  start_pixel(1) + step_length * step_count * std::sin(direction),
-                                  curr_index);
+            current_map_.getIndex(
+                start_pixel(0) + step_length * step_count * std::cos(direction),
+                start_pixel(1) + step_length * step_count * std::sin(direction),
+                curr_index);
           }
           if ( step_count > sector_threshold ) {
-            if ( scan_.ranges[start_i] >= scan_.range_max
-                || scan_.ranges[start_i] == std::numeric_limits<float>::infinity() ) {
+            if ( scan_.ranges[start_i] >= scan_.range_max ||
+                scan_.ranges[start_i] == Infinity ) {
               start_i--;
-            } 
+            }
             if ( scan_.ranges[end_i] > scan_.ranges[start_i] )
-              sector_bound = end_i * scan_.angle_increment + robot_theta_ + scan_.angle_min;
+              sector_bound = end_i * scan_.angle_increment +
+                  robot_theta_ + scan_.angle_min;
             else
-              sector_bound = start_i * scan_.angle_increment + robot_theta_ + scan_.angle_min;
+              sector_bound = start_i * scan_.angle_increment +
+                  robot_theta_ + scan_.angle_min;
             sector_found = true;
             length = step_count * step_length;
             break;
@@ -531,8 +492,9 @@ void MicvisionExploration::searchDeeper() {
     // to get the coordinates of the nearest frontier
     current_map_.getCoordinates(goal_pixel, curr_index);
     // to calculate the heading direction
-    double direction = std::atan2(int(goal_pixel(1)) - int(start_pixel(1)),
-                                  int(goal_pixel(0)) - int(start_pixel(0)));
+    double direction = std::atan2(
+        static_cast<int>(goal_pixel(1)) - static_cast<int>(start_pixel(1)),
+        static_cast<int>(goal_pixel(0)) - static_cast<int>(start_pixel(0)));
     // to search deeper
     int step = 0;
     unsigned int oldIndex = curr_index;
@@ -545,8 +507,9 @@ void MicvisionExploration::searchDeeper() {
                             curr_pixel(1) + step_length * std::sin(direction),
                             curr_index);
     }
-    int curr_distance = (curr_pixel(0) - start_pixel(0)) * (curr_pixel(0) - start_pixel(0))
-                         + (curr_pixel(1) - start_pixel(1)) * (curr_pixel(1) - start_pixel(1));
+    int curr_distance =
+        (curr_pixel(0) - start_pixel(0)) * (curr_pixel(0) - start_pixel(0)) +
+        (curr_pixel(1) - start_pixel(1)) * (curr_pixel(1) - start_pixel(1));
     if ( curr_distance > curr_longest ) {
       goal_index_ = oldIndex;
       curr_longest = curr_distance;

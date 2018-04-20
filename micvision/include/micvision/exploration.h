@@ -17,13 +17,19 @@
 #include <Eigen/Core>
 
 namespace micvision {
+// threshold for the distance between the goal and robot position
+#define DISTANCE_THRESHOLD      40
+// step interval for search deeper situation
+#define SEARCH_DEEPER_INTERVAL  16
+// step interval for find sector situation
+#define FIND_SECTOR_INTERVAL    50
+#define Infinity  (std::numeric_limits<float>::infinity())
 
 using Action = micvision::ExplorationAction;
 using Server = actionlib::SimpleActionServer<Action>;
 using Client = actionlib::SimpleActionClient<Action>;
 
-class MicvisionExploration
-{
+class MicvisionExploration {
  public:
   MicvisionExploration();
   ~MicvisionExploration();
@@ -40,16 +46,12 @@ class MicvisionExploration
   void mapCallback(const nav_msgs::OccupancyGrid& global_map);
   void scanCallback(const sensor_msgs::LaserScan& scan);
   void externGoalCallback(const geometry_msgs::PoseStamped&);
-  int scoreLine(double, double);
   Pixel world2pixel(const Point& point) const;
   Point pixel2world(const Pixel& pixel) const;
 
   bool setCurrentPosition();
   void stop();
   bool preparePlan();
-
-  // start pixel is [0, 0]
-  std::vector<Pixel> bresenham(const Pixel& end);
 
   bool findSector();
   void searchDeeper();
@@ -69,21 +71,19 @@ class MicvisionExploration
   Server* exploration_action_server_;
 
   // Current status and goals
-  bool receive_new_map_;
-  bool is_paused_;
-  bool is_stopped_;
+  bool receive_new_map_ = true;
+  bool is_paused_ = false;
+  bool is_stopped_ = false;
   unsigned int goal_index_;
   unsigned int start_index_;
   double update_frequency_;
 
-  double angles_;
-
-  Point goal_point_;
+  Point goal_point_ = Point(100.0, 100.0);
   double robot_theta_;
-  unsigned int count_;
-  unsigned int interval_;
+  unsigned int count_ = 0;
+  unsigned int interval_ = SEARCH_DEEPER_INTERVAL;
   sensor_msgs::LaserScan scan_;
-  bool exploration_running_;
+  bool exploration_running_ = false;
 
   // Everything related to the global map and plan
   GridMap current_map_;
