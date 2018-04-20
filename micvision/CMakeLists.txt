@@ -99,7 +99,7 @@ generate_messages(
 
 ## Generate dynamic reconfigure parameters in the 'cfg' folder
 generate_dynamic_reconfigure_options(
-  cfg/location.cfg
+  cfg/localization.cfg
 )
 
 ###################################
@@ -113,7 +113,7 @@ generate_dynamic_reconfigure_options(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS include
-#  LIBRARIES micvision_location
+#  LIBRARIES micvision_localization
   CATKIN_DEPENDS
   roscpp
   geometry_msgs
@@ -127,8 +127,8 @@ catkin_package(
 ## Build ##
 ###########
 
-## Specify additional locations of header files
-## Your package locations should be listed before other locations
+## Specify additional localizations of header files
+## Your package localizations should be listed before other localizations
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
@@ -136,8 +136,8 @@ include_directories(
 )
 
 ## Declare a C++ library
-add_library(${PROJECT_NAME}_location
-  src/location.cpp
+add_library(${PROJECT_NAME}_localization
+  src/localization.cpp
 )
 add_library(${PROJECT_NAME}_exploration
   src/exploration.cpp
@@ -151,17 +151,17 @@ add_library(${PROJECT_NAME}_exploration
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(${PROJECT_NAME}_location_node
-    src/location_node.cpp)
+add_executable(${PROJECT_NAME}_localization_node
+    src/localization_node.cpp)
 add_executable(${PROJECT_NAME}_exploration_node src/exploration_node.cpp
     src/exploration.cpp)
 add_executable(${PROJECT_NAME}_exploration_client
     src/exploration_client.cpp)
-## add_executable(location_client src/location_client.cpp)
+## add_executable(localization_client src/localization_client.cpp)
 
-add_dependencies(${PROJECT_NAME}_location
+add_dependencies(${PROJECT_NAME}_localization
     ${catkin_EXPORTED_TARGETS})
-add_dependencies(${PROJECT_NAME}_location_node
+add_dependencies(${PROJECT_NAME}_localization_node
     ${catkin_EXPORTED_TARGETS})
 add_dependencies(${PROJECT_NAME}_exploration
     ${catkin_EXPORTED_TARGETS})
@@ -169,10 +169,10 @@ add_dependencies(${PROJECT_NAME}_exploration_node
     ${catkin_EXPORTED_TARGETS})
 add_dependencies(${PROJECT_NAME}_exploration_client
     ${catkin_EXPORTED_TARGETS})
-## add_dependencies(location_client ${catkin_EXPORTED_TARGETS})
+## add_dependencies(localization_client ${catkin_EXPORTED_TARGETS})
 
-target_link_libraries(${PROJECT_NAME}_location_node
-    ${PROJECT_NAME}_location
+target_link_libraries(${PROJECT_NAME}_localization_node
+    ${PROJECT_NAME}_localization
     ${catkin_LIBRARIES}
     ${EIGEN3_LIBRARIES})
 target_link_libraries(${PROJECT_NAME}_exploration ${catkin_LIBRARIES})
@@ -180,7 +180,7 @@ target_link_libraries(${PROJECT_NAME}_exploration_node
     ${PROJECT_NAME}_exploration ${catkin_LIBRARIES})
 target_link_libraries(${PROJECT_NAME}_exploration_client
     ${catkin_LIBRARIES})
-## target_link_libraries(location_client ${catkin_LIBRARIES})
+## target_link_libraries(localization_client ${catkin_LIBRARIES})
 
 
 ## Rename C++ executable without prefix
@@ -214,8 +214,8 @@ target_link_libraries(${PROJECT_NAME}_exploration_client
 
 ## Mark executables and/or libraries for installation
 install(TARGETS
-    ${PROJECT_NAME}_location
-    ${PROJECT_NAME}_location_node
+    ${PROJECT_NAME}_localization
+    ${PROJECT_NAME}_localization_node
     ${PROJECT_NAME}_exploration
     ${PROJECT_NAME}_exploration_node
     ${PROJECT_NAME}_exploration_client
@@ -242,7 +242,7 @@ install(DIRECTORY include/${PROJECT_NAME}/
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_micvision_location.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_micvision_localization.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

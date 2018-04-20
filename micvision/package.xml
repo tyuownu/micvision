@@ -4,7 +4,8 @@
   <version>0.1.0</version>
   <description>
       The micvision package:
-      1. the micvision_location: to location the robot when you navition but do not know where the robot is.
+      1. the micvision_localization: to localization the robot when you navition but do not know where the robot is.
+      2. the micvision_exploration: to explore the whole map autonomous
   </description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->

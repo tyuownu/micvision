@@ -1,5 +1,5 @@
-#ifndef MICVISION_LOCATION_H_
-#define MICVISION_LOCATION_H_
+#ifndef MICVISION_LOCALIZATION_H_
+#define MICVISION_LOCALIZATION_H_
 
 // ros
 #include <ros/ros.h>
@@ -13,10 +13,10 @@
 #include <geometry_msgs/Pose2D.h>
 #include <dynamic_reconfigure/server.h>
 
-// micvision_location
+// micvision_Localization
 #include <micvision/commands.h>
 #include <micvision/grid_map.h>
-#include <micvision/LocationConfig.h>
+#include <micvision/LocalizationConfig.h>
 
 
 // std
@@ -33,8 +33,8 @@ constexpr double PI_2 = 2*M_PI;
 constexpr double RADIAN_PRE_DEGREE = M_PI/180;
 typedef std::vector<Eigen::Vector3f> PointCloud;
 typedef std::vector<Eigen::Vector2i> PointCloudUV;
-typedef micvision::LocationConfig Config;
-typedef dynamic_reconfigure::Server<Config> LocationConfigServer;
+typedef micvision::LocalizationConfig Config;
+typedef dynamic_reconfigure::Server<Config> LocalizationConfigServer;
 typedef dynamic_reconfigure::Server<Config>::CallbackType CallbackType;
 
 struct CellData {
@@ -58,10 +58,10 @@ struct LaserScanSample {
   int min_y, max_y;
 };
 
-class MicvisionLocation {
+class MicvisionLocalization {
  public:
-    MicvisionLocation();
-    ~MicvisionLocation();
+    MicvisionLocalization();
+    ~MicvisionLocalization();
 
     void debugAPosition(const geometry_msgs::Pose2D &pose);
 
@@ -69,7 +69,7 @@ class MicvisionLocation {
     // private function
     void mapCallback(const nav_msgs::OccupancyGrid& map);
     void scanCallback(const sensor_msgs::LaserScan& scan);
-    bool receiveLocation(
+    bool receiveLocalization(
         std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &res );
     bool getMap();
 
@@ -141,7 +141,7 @@ class MicvisionLocation {
     ros::Subscriber map_sub_;
     ros::Subscriber scan_sub_;
     ros::Subscriber debug_position_sub_;
-    ros::ServiceServer location_server_;
+    ros::ServiceServer localization_server_;
 
     ros::ServiceClient get_map_client_;
 
@@ -156,8 +156,8 @@ class MicvisionLocation {
     int quick_score_num_;
     bool quick_score_;
 
-    LocationConfigServer *dynamic_srv_; 
+    LocalizationConfigServer *dynamic_srv_;
 
 };
 }  // namespace micvision
-#endif  // end MICVISION_LOCATION_H_
+#endif  // end MICVISION_LOCALIZATION_H_
