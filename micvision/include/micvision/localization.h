@@ -69,8 +69,8 @@ class MicvisionLocalization {
     // private function
     void mapCallback(const nav_msgs::OccupancyGrid& map);
     void scanCallback(const sensor_msgs::LaserScan& scan);
-    bool receiveLocalization(
-        std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &res );
+    bool receiveLocalization(std_srvs::Trigger::Request &req,
+                             std_srvs::Trigger::Response &res);
     bool getMap();
 
     // Inflation radius relative
@@ -99,32 +99,32 @@ class MicvisionLocalization {
 
     void reconfigureCB(Config &config, uint32_t level);
 
-    bool has_new_map_;
-    double inflation_radius_;
+    bool has_new_map_ = true;
+    double inflation_radius_ = 0.3;
     unsigned int cell_inflation_radius_;
     /// Not used
-    double robot_radius_;
+    double robot_radius_ = 0.2;
     /// to define the obstacle cost
     /// TODO:
     /// Maybe we can translate this to double 1.0?
-    signed char cost_obstacle_;
+    signed char cost_obstacle_ = 100;
 
     // laserscan relative
     /// If we are in handling the laserscan
     /// we should not update point_cloud_
-    bool handling_lasescan_;
+    bool handling_lasescan_ = false;
     /// point in a scan, this may have bugs for real lidar
     /// TODO: fix on real lidar
     PointCloud point_cloud_;
 
     /// the step for we construct point_cloud_
-    int laserscan_circle_step_;
-    int range_step_;   // unit: resolution
-    int laserscan_anglar_step_;  // unit: degree
+    int laserscan_circle_step_ = 6;
+    int range_step_ = 3;   // unit: resolution
+    int laserscan_anglar_step_ = 6;  // unit: degree
 
     std::vector<LaserScanSample> laserscan_samples_;
     // min and max valid distance for laserscan
-    double min_valid_range_, max_valid_range_;
+    double min_valid_range_ = 0.0, max_valid_range_ = 10.0;
 
     // best result
     double best_angle_;
@@ -146,18 +146,17 @@ class MicvisionLocalization {
     ros::ServiceClient get_map_client_;
 
     // Inflation relative
-    signed char **cached_costs_;
-    double **cached_distances_;
-    unsigned char *inflation_markers_;
+    signed char **cached_costs_ = nullptr;
+    double **cached_distances_ = nullptr;
+    unsigned char *inflation_markers_ = nullptr;
     std::priority_queue<CellData> inflation_queue_;
 
     /// quick score
     /// we using quick score to define this point is reseanable
-    int quick_score_num_;
-    bool quick_score_;
+    int quick_score_num_ = 8;
+    bool quick_score_ = true;
 
     LocalizationConfigServer *dynamic_srv_;
-
 };
 }  // namespace micvision
 #endif  // end MICVISION_LOCALIZATION_H_
