@@ -79,11 +79,9 @@ class MicvisionExploration
   double angles_;
 
   Point goal_point_;
-  double world_theta_;
+  double robot_theta_;
   unsigned int count_;
   unsigned int interval_;
-  double angle_increment_;
-  double angle_min_;
   sensor_msgs::LaserScan scan_;
   bool exploration_running_;
 
