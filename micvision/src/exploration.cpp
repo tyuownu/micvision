@@ -7,6 +7,9 @@
 #include <limits>
 #include <mutex>
 
+#define DISTANCE_THRESHOLD      40      // threshold for the distance between the goal and robot position
+#define SEARCH_DEEPER_INTERVAL  16      // step interval for search deeper situation
+#define FIND_SECTOR_INTERVAL    50      // step interval for find sector situation
 
 namespace micvision {
 using Queue = std::multimap<double, unsigned int>;
@@ -155,7 +158,9 @@ MicvisionExploration::~MicvisionExploration() {
 
 bool MicvisionExploration::receiveStopExploration(std_srvs::Trigger::Request &req,
                                                   std_srvs::Trigger::Response &res) {
-  is_stopped_ = true;
+  if ( exploration_running_ ) {
+    is_stopped_ = true;
+  }
   res.success = true;
   res.message = "Exploration received stop signal.";
   return true;
@@ -212,8 +217,9 @@ void MicvisionExploration::stop() {
 void MicvisionExploration::receiveExplorationGoal(
     const micvision::ExplorationGoal::ConstPtr &goal) {
   ros::Rate loop_rate(update_frequency_);
-  ros::Rate long_rate(0.2);
   exploration_running_ = true;
+  // so we can search for a goal immediately 
+  count_ = interval_;
   while ( true ) {
     // Check if we are asked to preempt
     receive_new_map_ = false;
@@ -230,7 +236,8 @@ void MicvisionExploration::receiveExplorationGoal(
     Pixel goal_pixel;
     goal_pixel = world2pixel(goal_point_);
 
-    if ( count_ == interval_ || current_map_.getData(goal_pixel) != -1 ) {
+    if ( count_ == interval_ || (current_map_.getIndex(goal_pixel, goal_index_)
+         && !current_map_.isFrontier(goal_index_)) ) {
       count_ = 0;
       // Where are we now
       if ( !setCurrentPosition() ) {
@@ -252,7 +259,7 @@ void MicvisionExploration::receiveExplorationGoal(
           current_map_.getCoordinates(goal_pixel, goal_index_);
           // if the distance between the goal and the robot position is lesser
           // than a threshold, we look for a sector or search deeper.
-          if ( PixelDistance(robot_pixel_, goal_pixel) <= 40 ) {
+          if ( PixelDistance(robot_pixel_, goal_pixel) <= DISTANCE_THRESHOLD ) {
             if ( !findSector() )
               searchDeeper();
           } else {
@@ -298,7 +305,7 @@ bool MicvisionExploration::setCurrentPosition() {
     return false;
   }
   robot_point_ = Point(transform.getOrigin().x(), transform.getOrigin().y());
-  world_theta_ = getYaw(transform.getRotation());
+  robot_theta_ = getYaw(transform.getRotation());
 
   robot_pixel_ = world2pixel(robot_point_);
   unsigned int i;
@@ -324,10 +331,8 @@ void MicvisionExploration::mapCallback(
 void MicvisionExploration::scanCallback(const sensor_msgs::LaserScan& scan) {
   ROS_DEBUG("scanCallback");
   // TODO: to be fulfill
-  // to copy the scan and calculate some parameters of the laserScan
+  // to copy the scan
   scan_ = scan;
-  angle_min_ = scan.angle_min;
-  angle_increment_ = scan.angle_increment;
 }
 
 Pixel MicvisionExploration::world2pixel(const Point& point) const {
@@ -419,26 +424,28 @@ bool MicvisionExploration::findSector() {
     if ( inf_count > inf_threshold ) {
       const int step_length = 5;
       const int step_max = 20;
+      const int sector_threshold = 5;
       unsigned int curr_index = 0;
       unsigned int step_count = 1;
-      double direction = (start_i + end_i - scan_.ranges.size()) / 2 * angle_increment_
-                          + world_theta_ + angle_min_;
+
+      double direction = (start_i + end_i - scan_.ranges.size()) / 2 * scan_.angle_increment
+                          + robot_theta_ + scan_.angle_min;
       current_map_.getCoordinates(start_pixel, start_index_);
       current_map_.getIndex(start_pixel(0) + step_length * std::cos(direction),
                             start_pixel(1) + step_length * std::sin(direction),
                             curr_index);
       // to determine the depth of the sector
-      while ( current_map_.getData(curr_index) == -1 && step_count < step_max ) {
+      while ( current_map_.isFrontier(curr_index) && step_count < step_max ) {
         step_count++;
         current_map_.getIndex(start_pixel(0) + step_length * step_count * std::cos(direction),
                               start_pixel(1) + step_length * step_count * std::sin(direction),
                               curr_index);
       }
-      if ( step_count > 5 ) {
+      if ( step_count > sector_threshold ) {
         if ( scan_.ranges[end_i] > scan_.ranges[start_i] )
-          sector_bound = end_i * angle_increment_ + world_theta_ + angle_min_;
+          sector_bound = end_i * scan_.angle_increment + robot_theta_ + scan_.angle_min;
         else
-          sector_bound = start_i * angle_increment_ + world_theta_ + angle_min_;
+          sector_bound = start_i * scan_.angle_increment + robot_theta_ + scan_.angle_min;
         length = step_count * step_length;
         sector_found = true;
       }
@@ -453,9 +460,10 @@ bool MicvisionExploration::findSector() {
       else {
         if ( inf_count > inf_threshold ) {
           end_i = i;
-          double direction = (start_i + end_i) / 2 * angle_increment_ + world_theta_ + angle_min_;
+          double direction = (start_i + end_i) / 2 * scan_.angle_increment + robot_theta_ + scan_.angle_min;
           const int step_length = 5;
           const int step_max = 20;
+          const int sector_threshold = 5;
           unsigned int curr_index = 0;
           unsigned int step_count = 1;
           current_map_.getCoordinates(start_pixel, start_index_);
@@ -463,21 +471,21 @@ bool MicvisionExploration::findSector() {
                                 start_pixel(1) + step_length * std::sin(direction),
                                 curr_index);
           // to determine the depth of the sector
-          while ( current_map_.getData(curr_index) == -1 && step_count < step_max) {
+          while ( current_map_.isFrontier(curr_index) && step_count < step_max) {
             step_count++;
             current_map_.getIndex(start_pixel(0) + step_length * step_count * std::cos(direction),
                                   start_pixel(1) + step_length * step_count * std::sin(direction),
                                   curr_index);
           }
-          if ( step_count > 5 ) {
+          if ( step_count > sector_threshold ) {
             if ( scan_.ranges[start_i] >= scan_.range_max
                 || scan_.ranges[start_i] == std::numeric_limits<float>::infinity() ) {
               start_i--;
             } 
             if ( scan_.ranges[end_i] > scan_.ranges[start_i] )
-              sector_bound = end_i * angle_increment_ + world_theta_ + angle_min_;
+              sector_bound = end_i * scan_.angle_increment + robot_theta_ + scan_.angle_min;
             else
-              sector_bound = start_i * angle_increment_ + world_theta_ + angle_min_;
+              sector_bound = start_i * scan_.angle_increment + robot_theta_ + scan_.angle_min;
             sector_found = true;
             length = step_count * step_length;
             break;
@@ -493,7 +501,7 @@ bool MicvisionExploration::findSector() {
                           start_pixel(1) + length * std::sin(sector_bound),
                           goal_index_);
     updateGoalCoordinates(goal_index_);
-    interval_ = 50;
+    interval_ = FIND_SECTOR_INTERVAL;
     return true;
   }
   else
@@ -510,12 +518,11 @@ void MicvisionExploration::searchDeeper() {
   ind[4] = goal_index_;                            // origin
 
   int curr_longest = 0;
-  double best_direction = 0.0;
   const int step_length = 5;
   const int step_max = 10;
   for ( int i = 0; i < 5; i++ ) {
     unsigned int curr_index = ind[i];
-    if ( current_map_.getData(curr_index) != -1 )
+    if ( !current_map_.isFrontier(curr_index) )
       continue;
     Pixel start_pixel;
     // to get the coordinates of the position of the robot
@@ -530,7 +537,7 @@ void MicvisionExploration::searchDeeper() {
     int step = 0;
     unsigned int oldIndex = curr_index;
     Pixel curr_pixel;
-    while ( current_map_.getData(curr_index) == -1 && step < step_max ) {
+    while ( current_map_.isFrontier(curr_index) && step < step_max ) {
       step++;
       oldIndex = curr_index;
       current_map_.getCoordinates(curr_pixel, oldIndex);
@@ -543,11 +550,10 @@ void MicvisionExploration::searchDeeper() {
     if ( curr_distance > curr_longest ) {
       goal_index_ = oldIndex;
       curr_longest = curr_distance;
-      best_direction = direction;
     }
   }
   updateGoalCoordinates(goal_index_);
-  interval_ = 16;
+  interval_ = SEARCH_DEEPER_INTERVAL;
 }
 
 void MicvisionExploration::updateGoalCoordinates(const unsigned int& goal) {
