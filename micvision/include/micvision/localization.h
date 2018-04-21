@@ -12,6 +12,8 @@
 #include <std_srvs/Trigger.h>
 #include <geometry_msgs/Pose2D.h>
 #include <dynamic_reconfigure/server.h>
+#include <tf/transform_listener.h>
+#include <nav_msgs/Odometry.h>
 
 // micvision_Localization
 #include <micvision/commands.h>
@@ -32,7 +34,7 @@ namespace micvision {
 constexpr double PI_2 = 2*M_PI;
 constexpr double RADIAN_PRE_DEGREE = M_PI/180;
 typedef std::vector<Eigen::Vector3f> PointCloud;
-typedef std::vector<Eigen::Vector2i> PointCloudUV;
+typedef std::vector<Pixel> PointCloudUV;
 typedef micvision::LocalizationConfig Config;
 typedef dynamic_reconfigure::Server<Config> LocalizationConfigServer;
 typedef dynamic_reconfigure::Server<Config>::CallbackType CallbackType;
@@ -64,6 +66,7 @@ class MicvisionLocalization {
     ~MicvisionLocalization();
 
     void debugAPosition(const geometry_msgs::Pose2D &pose);
+    void tracking();
 
  private:
     // private function
@@ -98,6 +101,13 @@ class MicvisionLocalization {
                          const unsigned int y);
 
     void reconfigureCB(Config &config, uint32_t level);
+
+    bool validPosition(const int &uv, const int &index);
+
+    std::vector<Pixel> bresenham(const Pixel &start, const Pixel &end);
+
+    void odomCallback(const nav_msgs::Odometry &odom);
+ private:
 
     bool has_new_map_ = true;
     double inflation_radius_ = 0.3;
@@ -140,6 +150,7 @@ class MicvisionLocalization {
     ros::Publisher position_publisher_;
     ros::Subscriber map_sub_;
     ros::Subscriber scan_sub_;
+    ros::Subscriber odom_sub_;
     ros::Subscriber debug_position_sub_;
     ros::ServiceServer localization_server_;
 
@@ -157,6 +168,15 @@ class MicvisionLocalization {
     bool quick_score_ = true;
 
     LocalizationConfigServer *dynamic_srv_;
+
+    tf::TransformListener tf_listener_;
+    std::string map_frame_;
+    std::string robot_frame_;
+    double tracking_frequency_ = 1.0;
+    double current_position_score_ = 0.0f;
+
+    // odom relative
+    bool big_angle_twist_ = false;
 };
 }  // namespace micvision
 #endif  // end MICVISION_LOCALIZATION_H_

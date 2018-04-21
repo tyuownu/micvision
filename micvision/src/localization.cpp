@@ -1,13 +1,15 @@
 #include <micvision/localization.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
-#include <tf/transform_listener.h>
 
 #include <string.h>
+#include <mutex>
 
 namespace micvision {
 
-inline Eigen::Vector2i floor(const Eigen::Vector3f& v) {
-  return Eigen::Vector2i(std::lround(v[0]-0.5), std::lround(v[1]-0.5));
+static std::mutex mtx;
+
+inline Pixel floor(const Eigen::Vector3f& v) {
+  return Pixel(std::lround(v[0]-0.5), std::lround(v[1]-0.5));
 }
 
 LaserScanSample MicvisionLocalization::transformPointCloud(
@@ -21,7 +23,7 @@ LaserScanSample MicvisionLocalization::transformPointCloud(
   int min_y = height_, max_y = -min_y;
   for ( const Eigen::Vector3f& point : point_cloud_ ) {
     // result.emplace_back(transform * point);
-    const Eigen::Vector2i temp = floor(transform * point / resolution);
+    const Pixel temp = floor(transform * point / resolution);
     min_x = min_x < temp[0] ? min_x : temp[0];
     min_y = min_y < temp[1] ? min_y : temp[1];
     max_x = max_x > temp[0] ? max_x : temp[0];
@@ -38,8 +40,12 @@ MicvisionLocalization::MicvisionLocalization() {
   position_publisher_ = nh.advertise<geometry_msgs::PoseWithCovarianceStamped>(
       "/initialpose", 1);
 
-  map_sub_  = nh.subscribe("/map", 1, &MicvisionLocalization::mapCallback, this);
-  scan_sub_ = nh.subscribe("/scan", 1, &MicvisionLocalization::scanCallback, this);
+  map_sub_  =
+      nh.subscribe("/map", 5, &MicvisionLocalization::mapCallback, this);
+  scan_sub_ =
+      nh.subscribe("/scan", 5, &MicvisionLocalization::scanCallback, this);
+  odom_sub_ =
+      nh.subscribe("/odom", 10, &MicvisionLocalization::odomCallback, this);
   debug_position_sub_ = nh.subscribe(
       "/debug_position", 1, &MicvisionLocalization::debugAPosition, this);
 
@@ -50,6 +56,14 @@ MicvisionLocalization::MicvisionLocalization() {
   std::string service_name;
   nh.param("map_service", service_name, std::string("/static_map"));
   get_map_client_ = nh.serviceClient<nav_msgs::GetMap>(service_name);
+
+  ros::NodeHandle nh_pravite("~/");
+  nh_pravite.param("map_frame", map_frame_, std::string("map"));
+  nh_pravite.param("robot_frame", robot_frame_, std::string("base_link"));
+  nh_pravite.param("tracking_frequency", tracking_frequency_, 1.0);
+
+  map_frame_ = tf_listener_.resolve(map_frame_);
+
 
   dynamic_srv_ = new LocalizationConfigServer(ros::NodeHandle("~"));
   CallbackType cb = boost::bind(&MicvisionLocalization::reconfigureCB,
@@ -92,7 +106,8 @@ void MicvisionLocalization::mapCallback(const nav_msgs::OccupancyGrid& map) {
 void MicvisionLocalization::scanCallback(const sensor_msgs::LaserScan& scan) {
   // ROS_INFO("scanCallback, scan size: %d", scan.ranges.size());
 
-  if ( ros::ok() && !handling_lasescan_ ) {
+  mtx.lock();
+  if ( ros::ok() ) {
     point_cloud_.clear();
     // generate the point_cloud_
     float angle = scan.angle_min;
@@ -107,10 +122,16 @@ void MicvisionLocalization::scanCallback(const sensor_msgs::LaserScan& scan) {
     }
     // handleLaserScan();
   }
+  mtx.unlock();
+}
+
+void MicvisionLocalization::odomCallback(const nav_msgs::Odometry &odom) {
+  big_angle_twist_ =
+      (std::abs(odom.twist.twist.angular.z) >= 0.2) ? true : false;
 }
 
 void MicvisionLocalization::handleLaserScan() {
-  handling_lasescan_ = true;
+  mtx.lock();
   laserscan_samples_.clear();
   double angle = -M_PI;
   laserscan_samples_.reserve(static_cast<int>(
@@ -122,7 +143,7 @@ void MicvisionLocalization::handleLaserScan() {
                     Eigen::AngleAxisf(angle, Eigen::Vector3f::UnitZ()))));
     angle += laserscan_anglar_step_ * RADIAN_PRE_DEGREE;
   }
-  handling_lasescan_ = false;
+  mtx.unlock();
 }
 
 void MicvisionLocalization::scoreLaserScanSamples() {
@@ -136,7 +157,6 @@ void MicvisionLocalization::scoreLaserScanSamples() {
   // ROS_INFO_STREAM("inflated map data size: " << inflated_map_data_.size());
   const int sample_size = laserscan_samples_[0].point_cloud.size();
   const int step = sample_size / quick_score_num_;
-  // for ( int uv = 0; uv < inflated_map_data_.size(); ++uv ) {
   for ( int v = 0; v < height_; v += range_step_ ) {
     for ( int u = 0; u < width_; u += range_step_ ) {
       const int uv = v*width_ + u;
@@ -171,9 +191,20 @@ void MicvisionLocalization::scoreLaserScanSamples() {
         sample_score /= static_cast<double>(sample_size);
 
         if ( sample_score > score ) {
+          if ( quick_score_ ) {
+            int object = 0;
+            for ( int point_index = 0; point_index < sample_size;
+                 point_index += step ) {
+              if ( validPosition(uv, sample.indices[point_index]) )
+                ++object;
+            }
+            if ( object <= quick_score_num_ / 2 )
+              continue;
+          }
+
           score = sample_score;
           best_angle_ = -M_PI + i * laserscan_anglar_step_ * RADIAN_PRE_DEGREE;
-          best_position_ = Eigen::Vector2i(u, v);
+          best_position_ = Pixel(u, v);
         }
       }
     }
@@ -204,6 +235,25 @@ void MicvisionLocalization::scoreLaserScanSamples() {
 
   ROS_INFO("Best score: %f, angle: %f, Best position: %f, %f, count: %d",
            score, best_angle_/RADIAN_PRE_DEGREE, x, y, count);
+}
+
+bool MicvisionLocalization::validPosition(const int &uv, const int &index) {
+  Pixel start(uv % width_, uv / width_),
+        end((uv + index) % width_, (uv + index) / width_);
+
+  const auto line = bresenham(start, end);
+
+  int i;
+  for ( i = 0; i < line.size(); ++i ) {
+    const auto l = line[i](0) + line[i](1)*width_;
+    if ( inflated_map_data_[l].second > 0.5 )
+      break;
+  }
+
+  if ( line.size() - i > 5 )
+    return false;
+  else
+    return true;
 }
 
 double MicvisionLocalization::scoreASample(const LaserScanSample& sample,
@@ -418,47 +468,131 @@ inline signed char MicvisionLocalization::costLookup(const unsigned int mx,
 }
 
 void MicvisionLocalization::debugAPosition(const geometry_msgs::Pose2D &pose) {
-  handleLaserScan();
+  // handleLaserScan();
+  mtx.lock();
+  LaserScanSample sample = transformPointCloud(Eigen::Quaternionf(
+          Eigen::AngleAxisf(pose.theta, Eigen::Vector3f::UnitZ())));
+  mtx.unlock();
   const double origin_x = current_map_.getOriginX();
   const double origin_y = current_map_.getOriginY();
-  ROS_INFO("origin: [%f, %f]", origin_x, origin_y);
+  ROS_DEBUG("origin: [%f, %f]", origin_x, origin_y);
 
   const int u = ( pose.x - origin_x ) / resolution_ + 1;
   const int v = ( pose.y - origin_y ) / resolution_ + 1;
-  const int angle_index = (pose.theta / 180.0 + 1) *
-      M_PI / laserscan_anglar_step_;
 
-  double score;
-  const LaserScanSample &sample = laserscan_samples_[angle_index];
-  ROS_INFO("angle index: %d, u: %d, v:%d", angle_index, u, v);
-
-  if ( v + sample.min_y <= 1 || v + sample.max_y >= height_ - 1 ||
-      u + sample.min_x <= 1 || u + sample.max_x >= width_ - 1 ) {
-    ROS_INFO("the laser is out of map's bound.");
-    return;
-  }
+  double score = 0.0;
 
   const int uv = v*width_ + u;
 
-  for ( const auto point_index : sample.indices )
-    score += inflated_map_data_[point_index + uv].second;
+  for ( const auto point_index : sample.indices ) {
+    const auto index = point_index + uv;
+    if ( index >= 0 && index < inflated_map_data_.size() )
+      score += inflated_map_data_[index].second;
+  }
 
   score /= static_cast<double>(sample.indices.size());
 
   ROS_INFO("Position: [%f, %f], angle: %f, score: %f",
            pose.x, pose.y, pose.theta, score);
+  current_position_score_ = score;
 
-  ROS_INFO("u: %d, v: %d", u, v );
-  for ( auto point_index : sample.indices )
-    ROS_INFO("index: %d, score: %d", point_index,
-             static_cast<int>( inflated_map_data_[point_index + uv].second ));
+/*
+ *  ROS_INFO("u: %d, v: %d", u, v );
+ *  for ( auto point_index : sample.indices )
+ *    ROS_INFO("index: %d, score: %d", point_index,
+ *             static_cast<int>( inflated_map_data_[point_index + uv].second ));
+ *
+ *  ROS_INFO("\n\n\nnext is the best position.");
+ *  const LaserScanSample &best_sample =
+ *      laserscan_samples_[( best_angle_+M_PI )/laserscan_anglar_step_ + 1];
+ *  const int best_uv = best_position_[1] * width_ + best_position_[0];
+ *  for ( const auto index : best_sample.indices )
+ *    ROS_INFO("index: %d, score: %d", index,
+ *             static_cast<int>( inflated_map_data_[index + best_uv].second ));
+ */
+}
 
-  ROS_INFO("\n\n\nnext is the best position.");
-  const LaserScanSample &best_sample =
-      laserscan_samples_[( best_angle_+M_PI )/laserscan_anglar_step_ + 1];
-  const int best_uv = best_position_[1] * width_ + best_position_[0];
-  for ( const auto index : best_sample.indices )
-    ROS_INFO("index: %d, score: %d", index,
-             static_cast<int>( inflated_map_data_[index + best_uv].second ));
+void MicvisionLocalization::tracking() {
+  ros::Rate rate(tracking_frequency_);
+  tf::StampedTransform transform;
+  int num = 0;
+  while ( true ) {
+    if ( big_angle_twist_ ) {
+      ROS_DEBUG("anglar twist is too big...");
+      num = 0;
+    } else {
+      try {
+        tf_listener_.lookupTransform(map_frame_, robot_frame_,
+                                     ros::Time(0), transform);
+      } catch ( tf::TransformException &ex ) {
+        ROS_ERROR("Could not get robot position: %s", ex.what());
+      }
+      geometry_msgs::Pose2D pose;
+      pose.x = transform.getOrigin().x();
+      pose.y = transform.getOrigin().y();
+      pose.theta = getYaw(transform.getRotation());
+
+      debugAPosition(pose);
+      ROS_INFO("current position: [x: %f, y: %f, theta: %f], score: %f",
+               pose.x, pose.y, pose.theta, current_position_score_);
+
+      if ( current_position_score_ < 0.5 )  // how to define the threshold
+        ++num;
+      else
+        num = 0;
+
+      if ( num > 10 ) {
+        // Do something according the num
+        // scoreLaserScanSamples();
+        num = 0;
+      }
+    }
+
+    ros::spinOnce();
+    rate.sleep();
+  }
+}
+
+std::vector<Pixel> MicvisionLocalization::bresenham(const Pixel &start,
+                                                    const Pixel &end) {
+  int x = start(0), y = start(1);
+  int dx = abs(end(0) - x);
+  int dy = abs(end(1) - y);
+
+  const int ux = end(0) > x ? 1 : -1;
+  const int uy = end(0) > y ? 1 : -1;
+
+  bool exchange = false;
+  if ( dy > dx ) {
+    std::swap(dx, dy);
+    exchange = true;
+  }
+
+  int p = 2 * dy - dx;
+  std::vector<Pixel> result;
+
+  for ( int i = 0; i <= dx; ++i ) {
+    // ROS_INFO("x: %d, y: %d", x, y);
+    if ( x <= 5 || x >= current_map_.getWidth() - 5 ||
+        y <= 5 || y >= current_map_.getHeight() - 5)
+      break;
+    result.push_back(Pixel(x, y));
+
+    if ( p >= 0 ) {
+      if ( !exchange )
+        y += uy;
+      else
+        x += ux;
+      p -= 2*dx;
+    }
+
+    if ( !exchange )
+      x += ux;
+    else
+      y += uy;
+    p += 2*dy;
+  }
+
+  return result;
 }
 }  // end namespace micvision
