@@ -1,4 +1,4 @@
-#include <micvision/location.h>
+#include <micvision/localization.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <tf/transform_listener.h>
 
@@ -9,8 +9,8 @@ namespace micvision {
 
 static std::mutex mtx;
 
-std::vector<Pixel> MicvisionLocation::bresenham(const Pixel &start,
-                                                const Pixel &end) {
+std::vector<Pixel> MicvisionLocalization::bresenham(const Pixel &start,
+                                                    const Pixel &end) {
   int x = start(0), y = start(1);
   int dx = abs(end(0) - x);
   int dy = abs(end(1) - y);
@@ -54,7 +54,7 @@ inline Pixel floor(const Eigen::Vector3f& v) {
   return Pixel(std::lround(v[0]-0.5), std::lround(v[1]-0.5));
 }
 
-LaserScanSample MicvisionLocation::transformPointCloud(
+LaserScanSample MicvisionLocalization::transformPointCloud(
     const Eigen::Quaternionf& transform) {
   PointCloudUV result;
   result.reserve(point_cloud_.size());
@@ -76,21 +76,24 @@ LaserScanSample MicvisionLocation::transformPointCloud(
   return LaserScanSample{result, indices, min_x, max_x, min_y, max_y};
 }
 
-MicvisionLocation::MicvisionLocation() {
+MicvisionLocalization::MicvisionLocalization() {
   ros::NodeHandle nh;
 
   position_publisher_ = nh.advertise<geometry_msgs::PoseWithCovarianceStamped>(
       "/initialpose", 1);
 
-  map_sub_  = nh.subscribe("/map", 5, &MicvisionLocation::mapCallback, this);
-  scan_sub_ = nh.subscribe("/scan", 5, &MicvisionLocation::scanCallback, this);
-  odom_sub_ = nh.subscribe("/odom", 10, &MicvisionLocation::odomCallback, this);
+  map_sub_  = nh.subscribe("/map", 5,
+                           &MicvisionLocalization::mapCallback, this);
+  scan_sub_ = nh.subscribe("/scan", 5,
+                           &MicvisionLocalization::scanCallback, this);
+  odom_sub_ = nh.subscribe("/odom", 10,
+                           &MicvisionLocalization::odomCallback, this);
   debug_position_sub_ = nh.subscribe(
-      "/debug_position", 1, &MicvisionLocation::debugAPosition, this);
+      "/debug_position", 1, &MicvisionLocalization::debugAPosition, this);
 
-  location_server_ =
+  localization_server_ =
       nh.advertiseService(LOCATION_SERVICE,
-                          &MicvisionLocation::receiveLocation, this);
+                          &MicvisionLocalization::receiveLocalization, this);
 
   std::string service_name;
   nh.param("map_service", service_name, std::string("/static_map"));
@@ -104,13 +107,13 @@ MicvisionLocation::MicvisionLocation() {
   map_frame_ = tf_listener_.resolve(map_frame_);
   robot_frame_ = tf_listener_.resolve(robot_frame_);
 
-  dynamic_srv_ = new LocationConfigServer(ros::NodeHandle("~"));
-  CallbackType cb = boost::bind(&MicvisionLocation::reconfigureCB,
+  dynamic_srv_ = new LocalizationConfigServer(ros::NodeHandle("~"));
+  CallbackType cb = boost::bind(&MicvisionLocalization::reconfigureCB,
                                 this, _1, _2);
   dynamic_srv_->setCallback(cb);
 }
 
-void MicvisionLocation::reconfigureCB(Config &config, uint32_t level) {
+void MicvisionLocalization::reconfigureCB(Config &config, uint32_t level) {
   inflation_radius_ = config.inflation_radius;
   robot_radius_ = config.robot_radius;
   laserscan_circle_step_ = config.laserscan_circle_step;
@@ -124,13 +127,13 @@ void MicvisionLocation::reconfigureCB(Config &config, uint32_t level) {
   return;
 }
 
-MicvisionLocation::~MicvisionLocation() {
+MicvisionLocalization::~MicvisionLocalization() {
   delete[] inflation_markers_;
   delete[] cached_distances_;
   delete[] cached_costs_;
 }
 
-void MicvisionLocation::mapCallback(const nav_msgs::OccupancyGrid& map) {
+void MicvisionLocalization::mapCallback(const nav_msgs::OccupancyGrid& map) {
   ROS_DEBUG("mapCallback");
 
   // only inflate the map when the first map or a new map comes
@@ -142,12 +145,12 @@ void MicvisionLocation::mapCallback(const nav_msgs::OccupancyGrid& map) {
   inflateMap();
 }
 
-void MicvisionLocation::odomCallback(const nav_msgs::Odometry &odom) {
+void MicvisionLocalization::odomCallback(const nav_msgs::Odometry &odom) {
   big_angle_twist_ =
       (std::abs(odom.twist.twist.angular.z) >= 0.1) ? true : false;
 }
 
-void MicvisionLocation::scanCallback(const sensor_msgs::LaserScan& scan) {
+void MicvisionLocalization::scanCallback(const sensor_msgs::LaserScan& scan) {
   // ROS_INFO("scanCallback, scan size: %d", scan.ranges.size());
 
   mtx.lock();
@@ -169,7 +172,7 @@ void MicvisionLocation::scanCallback(const sensor_msgs::LaserScan& scan) {
   mtx.unlock();
 }
 
-void MicvisionLocation::handleLaserScan() {
+void MicvisionLocalization::handleLaserScan() {
   mtx.lock();
   laserscan_samples_.clear();
   double angle = -M_PI;
@@ -185,7 +188,7 @@ void MicvisionLocation::handleLaserScan() {
   mtx.unlock();
 }
 
-void MicvisionLocation::scoreLaserScanSamples() {
+void MicvisionLocalization::scoreLaserScanSamples() {
   // first we need handle the point_cloud_
   handleLaserScan();
   ROS_INFO("start score");
@@ -279,7 +282,7 @@ void MicvisionLocation::scoreLaserScanSamples() {
            score, best_angle_/RADIAN_PRE_DEGREE, x, y, count);
 }
 
-bool MicvisionLocation::validPosition(const int uv, const int index) {
+bool MicvisionLocalization::validPosition(const int uv, const int index) {
   Pixel start(uv % width_, uv / width_),
         end((uv + index) % width_, (uv + index) / width_);
   /*
@@ -302,8 +305,8 @@ bool MicvisionLocation::validPosition(const int uv, const int index) {
     return true;
 }
 
-double MicvisionLocation::scoreASample(const LaserScanSample& sample,
-                                       const int u, const int v) {
+double MicvisionLocalization::scoreASample(const LaserScanSample& sample,
+                                           const int u, const int v) {
   double score = 0;
   if ( quick_score_ ) {
     int step = sample.point_cloud.size() / quick_score_num_;
@@ -323,11 +326,11 @@ double MicvisionLocation::scoreASample(const LaserScanSample& sample,
   return score;
 }
 
-bool MicvisionLocation::receiveLocation(
+bool MicvisionLocalization::receiveLocalization(
     std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &res) {
   scoreLaserScanSamples();
   res.success = true;
-  res.message = "Location success.";
+  res.message = "Localization success.";
   return true;
 
   /*
@@ -344,7 +347,7 @@ bool MicvisionLocation::receiveLocation(
    */
 }
 
-bool MicvisionLocation::getMap() {
+bool MicvisionLocalization::getMap() {
   // new map comming?
   if ( !has_new_map_ )
     return false;
@@ -369,7 +372,7 @@ bool MicvisionLocation::getMap() {
   return true;
 }
 
-void MicvisionLocation::computeCaches() {
+void MicvisionLocalization::computeCaches() {
   cached_costs_ = new signed char*[cell_inflation_radius_+2];
   cached_distances_ = new double*[cell_inflation_radius_+2];
 
@@ -386,7 +389,7 @@ void MicvisionLocation::computeCaches() {
   }
 }
 
-void MicvisionLocation::inflateMap() {
+void MicvisionLocalization::inflateMap() {
   ROS_DEBUG("Infalting the map ...");
   const int map_size = current_map_.getSize();
   width_ = current_map_.getWidth();
@@ -462,9 +465,9 @@ void MicvisionLocation::inflateMap() {
   }
 }
 
-void MicvisionLocation::enqueueObstacle(const unsigned int index,
-                                        const unsigned int x,
-                                        const unsigned int y) {
+void MicvisionLocalization::enqueueObstacle(const unsigned int index,
+                                            const unsigned int x,
+                                            const unsigned int y) {
   unsigned int mx, my;
   if ( !current_map_.getCoordinates(mx, my, index) ||
        inflation_markers_[index] != 0 )
@@ -481,10 +484,9 @@ void MicvisionLocation::enqueueObstacle(const unsigned int index,
   current_map_.setData(index, value);
 }
 
-inline double MicvisionLocation::distanceLookup(const unsigned int mx,
-                                                const unsigned int my,
-                                                const unsigned int sx,
-                                                const unsigned int sy) const {
+inline double MicvisionLocalization::distanceLookup(
+    const unsigned int mx, const unsigned int my,
+    const unsigned int sx, const unsigned int sy) const {
   const unsigned int dx = abs(static_cast<int>(mx) - static_cast<int>(sx));
   const unsigned int dy = abs(static_cast<int>(my) - static_cast<int>(sy));
 
@@ -497,10 +499,9 @@ inline double MicvisionLocation::distanceLookup(const unsigned int mx,
   return cached_distances_[dx][dy];
 }
 
-inline signed char MicvisionLocation::costLookup(const unsigned int mx,
-                                                 const unsigned int my,
-                                                 const unsigned int sx,
-                                                 const unsigned int sy) const {
+inline signed char MicvisionLocalization::costLookup(
+    const unsigned int mx, const unsigned int my,
+    const unsigned int sx, const unsigned int sy) const {
   const unsigned int dx = abs(static_cast<int>(mx) - static_cast<int>(sx));
   const unsigned int dy = abs(static_cast<int>(my) - static_cast<int>(sy));
 
@@ -513,7 +514,7 @@ inline signed char MicvisionLocation::costLookup(const unsigned int mx,
   return cached_costs_[dx][dy];
 }
 
-void MicvisionLocation::debugAPosition(const geometry_msgs::Pose2D &pose) {
+void MicvisionLocalization::debugAPosition(const geometry_msgs::Pose2D &pose) {
   // handleLaserScan();
   mtx.lock();
   LaserScanSample sample = transformPointCloud(Eigen::Quaternionf(
@@ -567,12 +568,12 @@ void MicvisionLocation::debugAPosition(const geometry_msgs::Pose2D &pose) {
  */
 }
 
-void MicvisionLocation::tracking() {
+void MicvisionLocalization::tracking() {
   ros::Rate rate(tracking_frequency_);
   tf::StampedTransform transform;
   int num = 0;
   while ( true && ros::ok() ) {
-    // TODO: first to get the current location
+    // TODO: first to get the current localization
     if ( big_angle_twist_ ) {
       ROS_DEBUG("anglar twist big...");
       num = 0;
@@ -611,6 +612,6 @@ void MicvisionLocation::tracking() {
     ros::spinOnce();
     rate.sleep();
   }
-  // score current location
+  // score current localization
 }
 }  // end namespace micvision

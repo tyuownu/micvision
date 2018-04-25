@@ -1,5 +1,0 @@
-<launch>
-  <node name="micvision_location_node" pkg="micvision" type="micvision_location_node" output="screen"/>
-    <!-- set some parameter here -->
-
-</launch>

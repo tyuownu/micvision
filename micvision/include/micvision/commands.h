@@ -1,8 +1,8 @@
 #ifndef MICVISION_COMMANDS_H_
 #define MICVISION_COMMANDS_H_
 
-#define LOCATION_SERVICE   "StartLocation"
-#define LOCATION_ACTION    "Location"
+#define LOCATION_SERVICE   "StartLocalization"
+#define LOCATION_ACTION    "Localization"
 
 #define STOP_SERVICE        "Stop"
 #define PAUSE_SERVICE       "Pause"
