@@ -571,7 +571,7 @@ void MicvisionLocation::tracking() {
   ros::Rate rate(tracking_frequency_);
   tf::StampedTransform transform;
   int num = 0;
-  while ( true ) {
+  while ( true && ros::ok() ) {
     // TODO: first to get the current location
     if ( big_angle_twist_ ) {
       ROS_DEBUG("anglar twist big...");
