@@ -328,7 +328,7 @@ void MicvisionExploration::scanCallback(const sensor_msgs::LaserScan& scan) {
           }
         } else {
           auto j = i-1;
-          while ( indices_[j] ) {
+          while ( j >= 0 && indices_[j] ) {
             auto k = j;
             indices_[i]++;
             while ( k < i ) {
