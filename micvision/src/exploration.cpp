@@ -99,8 +99,12 @@ MicvisionExploration::MicvisionExploration() {
       robot_node.advertiseService(STOP_SERVICE,
                                   &MicvisionExploration::receiveStop, this);
   pause_server_ =
-      robot_node.advertiseService(PAUSE_SERVICE,
+      robot_node.advertiseService(PAUSE_EXPLORATION_SERVICE,
                                   &MicvisionExploration::receivePause, this);
+  stop_exploration_server_ = 
+      robot_node.advertiseService(STOP_EXPLORATION_SERVICE,
+                                  &MicvisionExploration::receiveStopExploration,
+                                  this);
 
   ros::NodeHandle robot_node_pravite("~/");
 
@@ -120,13 +124,19 @@ MicvisionExploration::MicvisionExploration() {
                              this, _1), false);
   exploration_action_server_->start();
 
-  goal_publisher_ = robot_node.advertise<geometry_msgs::PoseStamped>(
-      "/move_base_simple/goal", 2);
+  goal_publisher_ = robot_node.advertise<move_base_msgs::MoveBaseActionGoal>(
+      "/move_base/goal", 2);
+  stop_publisher_ = robot_node.advertise<actionlib_msgs::GoalID>(
+      "/move_base/cancel",2);
   map_sub_ = robot_node.subscribe("/move_base_node/global_costmap/costmap", 1,
                                   &MicvisionExploration::mapCallback, this);
   ros::Duration(1.0).sleep();
   scan_sub_ = robot_node.subscribe("/scan", 1,
                                    &MicvisionExploration::scanCallback, this);
+
+  extern_goal_sub_ = robot_node.subscribe("/move_base_simple/goal", 1, 
+                                          &MicvisionExploration::externGoalCallback,
+                                          this);
 
   stop_publisher_ = robot_node.advertise<actionlib_msgs::GoalID>(
       "/move_base/cancel", 2);
@@ -136,17 +146,34 @@ MicvisionExploration::~MicvisionExploration() {
   delete exploration_action_server_;
 }
 
+bool MicvisionExploration::receiveStopExploration(std_srvs::Trigger::Request &req,
+                                                  std_srvs::Trigger::Response &res) {
+  if ( exploration_running_ ) {
+    is_stopped_ = true;
+    res.success = true;
+    res.message = "Exploration received StopExploration signal.";
+  } else {
+    res.success = false;
+    res.message = "the Autonomous exploration is not running.";
+  }
+  return true;
+}
+
 bool MicvisionExploration::receiveStop(std_srvs::Trigger::Request &req,
                                        std_srvs::Trigger::Response &res) {
-  is_stopped_ = true;
-  res.success = true;
-  res.message = "Exploration received stop signal.";
+  if ( exploration_running_ ) {
+    is_stopped_ = true;
+  }
 
   actionlib_msgs::GoalID stop;
   stop.id = "";
   stop.stamp.sec = 0;
   stop.stamp.nsec = 0;
   stop_publisher_.publish(stop);
+
+  res.success = true;
+  res.message = "Received stop signal.";
+  
   return true;
 }
 
@@ -173,6 +200,7 @@ void MicvisionExploration::receiveExplorationGoal(
     const micvision::ExplorationGoal::ConstPtr &goal) {
   ros::Rate loop_rate(update_frequency_);
   int index = 100;
+  exploration_running_ = true;
   while ( true ) {
     // Check if we are asked to preempt
     if ( !ros::ok() || exploration_action_server_->isPreemptRequested()
@@ -180,6 +208,7 @@ void MicvisionExploration::receiveExplorationGoal(
       ROS_INFO("Exploration has been preempted externally.");
       exploration_action_server_->setPreempted();
       stop();
+      exploration_running_ = false;
       return;
     }
 
@@ -188,6 +217,7 @@ void MicvisionExploration::receiveExplorationGoal(
       ROS_ERROR("Exploration failed, could not get current position.");
       exploration_action_server_->setAborted();
       stop();
+      exploration_running_ = false;
       return;
     }
 
@@ -211,7 +241,7 @@ void MicvisionExploration::receiveExplorationGoal(
 
       bool goal_is_too_close = false;
       if ( goal_index == current_map_.getSize() ) {
-        ROS_INFO("The goal is out of bround.");
+        ROS_INFO("The goal is out of bound.");
         goal_point_ = robot_point_;
       } else {
         current_map_.getCoordinates(goal_pixel_, goal_index);
@@ -232,6 +262,11 @@ void MicvisionExploration::receiveExplorationGoal(
       }
       ROS_INFO("goal: x = %f, y = %f", goal_point_(0), goal_point_(1));
 
+      move_base_msgs::MoveBaseActionGoal move_base_action_goal;
+      move_base_action_goal.header.stamp  = ros::Time::now();
+      move_base_action_goal.goal_id.stamp.sec = 0;
+      move_base_action_goal.goal_id.stamp.nsec = 0;
+      move_base_action_goal.goal_id.id = "";
       geometry_msgs::PoseStamped posestamped_goal;
       posestamped_goal.header.stamp = ros::Time::now();
       posestamped_goal.header.frame_id = "map";
@@ -239,7 +274,9 @@ void MicvisionExploration::receiveExplorationGoal(
       posestamped_goal.pose.position.y = goal_point_(1);
       posestamped_goal.pose.orientation =
           tf::createQuaternionMsgFromYaw(robot_direction_);
-      goal_publisher_.publish(posestamped_goal);
+      move_base_action_goal.goal.target_pose = posestamped_goal;
+      if ( !is_stopped_ )
+        goal_publisher_.publish(move_base_action_goal);
     }
 
     // Sleep remaining time
@@ -282,6 +319,12 @@ void MicvisionExploration::mapCallback(
   current_map_.update(global_map);
   current_map_.setLethalCost(80);
   map_mutex.unlock();
+}
+
+void MicvisionExploration::externGoalCallback(const geometry_msgs::PoseStamped& extern_goal) {
+  if ( exploration_running_ ) {
+    is_stopped_ = true;
+  }
 }
 
 void MicvisionExploration::scanCallback(const sensor_msgs::LaserScan& scan) {
