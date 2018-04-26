@@ -1,7 +1,7 @@
 <launch>
   <master auto="start"/>
   <include file="$(find micvision_sim)/move_base_config/move_base_turtlebot2.xml"/>
-   <arg name="map_filename" default="$(find micvision_sim)/stage_config/maps/maze.yaml"/>
+  <arg name="map_filename" default="$(find micvision_sim)/stage_config/maps/maze.yaml"/>
   <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_filename)" respawn="false" />
   <include file="$(find micvision_sim)/move_base_config/amcl.diff.xml"/>
 </launch>
