@@ -33,12 +33,15 @@ class MicvisionExploration {
  private:
   bool receiveStop(std_srvs::Trigger::Request &req,
                    std_srvs::Trigger::Response &res);
+  bool receiveStopExploration(std_srvs::Trigger::Request &req,
+                              std_srvs::Trigger::Response &res);
   bool receivePause(std_srvs::Trigger::Request &req,
                     std_srvs::Trigger::Response &res);
   void receiveExplorationGoal(
       const micvision::ExplorationGoal::ConstPtr &goal);
   void mapCallback(const nav_msgs::OccupancyGrid& global_map);
   void scanCallback(const sensor_msgs::LaserScan& scan);
+  void externGoalCallback(const geometry_msgs::PoseStamped&);
   Pixel world2pixel(const Point& point) const;
   Point pixel2world(const Pixel& pixel) const;
 
@@ -55,6 +58,7 @@ class MicvisionExploration {
   tf::TransformListener tf_listener_;
   ros::ServiceServer stop_server_;
   ros::ServiceServer pause_server_;
+  ros::ServiceServer stop_exploration_server_;
 
   std::string map_frame_;
   std::string robot_frame_;
@@ -65,6 +69,7 @@ class MicvisionExploration {
   // Current status and goals
   bool is_paused_ = false;
   bool is_stopped_ = false;
+  bool exploration_running_ = false;
   unsigned int start_index_ = -1;
   double update_frequency_;
 
@@ -76,6 +81,7 @@ class MicvisionExploration {
   ros::Publisher goal_publisher_;
   ros::Subscriber map_sub_;
   ros::Subscriber scan_sub_;
+  ros::Subscriber extern_goal_sub_;
   ros::Publisher stop_publisher_;
 
   Pixel robot_pixel_ = Pixel(0, 0);
