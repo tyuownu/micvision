@@ -56,8 +56,8 @@ __The package list in this repository.__
 
 This package uses the `stage` to simulate the real environment, you can use the
 `stage_ros` from the ROS or use the `stage_ros` that we provide. The difference
-between these two versions is, the laser scan data provided by the `stage` is
-very accurate while the data provided by the `stage_ros` is corrupted with noise.
+between these two versions is, the laser scan data in `stage_ros` provided by
+ROS is very accurate while the data provided by us is corrupted with noise.
 
 The package also has two parts: `mapping` and `navigation`.
 
