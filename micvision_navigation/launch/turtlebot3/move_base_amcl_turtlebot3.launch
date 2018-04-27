@@ -4,4 +4,5 @@
   <arg name="map_filename" default="$(find micvision_sim)/stage_config/maps/maze.yaml"/>
   <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_filename)" respawn="false" />
   <include file="$(find micvision_sim)/move_base_config/amcl.diff.xml"/>
+  <node name="micvision_localization_node" pkg="micvision" type="micvision_localization_node" output="screen"/>
 </launch>

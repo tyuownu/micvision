@@ -10,4 +10,5 @@
   </node>
   <include file="$(find micvision_sim)/move_base_config/amcl.diff.xml"/>
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find micvision_sim)/rviz/navigation.rviz" />
+  <node name="micvision_localization_node" pkg="micvision" type="micvision_localization_node" output="screen"/>
 </launch>
