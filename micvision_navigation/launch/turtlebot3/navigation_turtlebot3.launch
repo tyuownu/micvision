@@ -1,4 +1,7 @@
 <launch>
   <include file="$(find micvision_navigation)/launch/turtlebot3/hardware_turtlebot3.launch" />
-  <include file="$(find micvision_navigation)/launch/turtlebot3/move_base_amcl_turtlebot3.launch" />
+  <arg name="map_filename" default="$(find micvision_sim)/stage_config/maps/maze.yaml"/>
+  <include file="$(find micvision_navigation)/launch/turtlebot3/move_base_amcl_turtlebot3.launch" >
+    <arg name="map_filename" value="$(arg map_filename)" />
+  </include>
 </launch>
