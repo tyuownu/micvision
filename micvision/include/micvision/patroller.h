@@ -35,6 +35,8 @@ class MicvisionPatroller {
   bool receiveResetCommand(std_srvs::Trigger::Request &req,
                            std_srvs::Trigger::Response &res);
 
+  void externGoalCallback(const geometry_msgs::PoseStamped &goal);
+
 
 
  private:
@@ -45,6 +47,7 @@ class MicvisionPatroller {
   ros::Publisher                       goal_pub_;
   ros::Subscriber                      click_sub_;
   ros::Subscriber                      feedback_sub_;
+  ros::Subscriber                      extern_goal_sub_;
   ros::ServiceServer                   cmd_start_server_;
   ros::ServiceServer                   cmd_stop_server_;
   ros::ServiceServer                   cmd_reset_server_;

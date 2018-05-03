@@ -13,6 +13,8 @@ MicvisionPatroller::MicvisionPatroller() {
                            &MicvisionPatroller::clickCallback, this);
   feedback_sub_ = n.subscribe("/move_base/feedback", 10,
                               &MicvisionPatroller::positionFeedback, this);
+  extern_goal_sub_ = n.subscribe("/move_base_simple/goal", 1,
+                                 &MicvisionPatroller::externGoalCallback, this);
 
   cmd_start_server_ = n.advertiseService(
       START_PATROLLER, &MicvisionPatroller::receiveStartCommand, this);
@@ -169,6 +171,10 @@ bool MicvisionPatroller::receiveResetCommand(
   res.success = true;
   res.message = "Reset patrol.";
   return true;
+}
+void MicvisionPatroller::externGoalCallback(
+    const geometry_msgs::PoseStamped &goal) {
+  patrolling_ = false;
 }
 }  // end namespace micvision
 
