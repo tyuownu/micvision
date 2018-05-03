@@ -52,6 +52,10 @@ __The package list in this repository.__
 
 `micvision_localization`: to localize the robot in a map.
 
+### micvision_patroller
+
+`micvision_patroller`: to patrol at the specified location.
+
 ## micvision_sim
 
 This package uses the `stage` to simulate the real environment, you can use the
@@ -100,6 +104,25 @@ roslaunch micvision_sim willow-navigation-sim.launch
 rosservice call /StartLocalization
 
 # click on the map using rviz, and the robot will move to it
+```
+
+### patroller
+
+![patroller](docs/imgs/patroller.gif)
+
+usage:
+```shell
+# run in the navigation mode
+roslaunch micvision_sim willow-navigation-sim.launch
+# using the RVIZ button `Publish Point` to assign some location to patroller
+# Than start patroller
+rosservice call /StartPatroller
+
+# or stop patroller
+rosservice call /StopPatroller
+
+# or reset the patroller
+rosservice call /ResetPatroller
 ```
 
 ## micvision_mapping
