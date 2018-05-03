@@ -18,8 +18,10 @@ find_package(catkin REQUIRED COMPONENTS
   actionlib_msgs
   move_base_msgs
   tf
+  visualization_msgs
 )
 
+find_package(Boost REQUIRED COMPONENTS)
 find_package(Eigen3 REQUIRED)
 add_definitions(${EIGEN3_DEFINITIONS})
 
@@ -158,6 +160,7 @@ add_executable(${PROJECT_NAME}_exploration_node src/exploration_node.cpp
 add_executable(${PROJECT_NAME}_exploration_client
     src/exploration_client.cpp)
 ## add_executable(localization_client src/localization_client.cpp)
+add_executable(${PROJECT_NAME}_patroller src/patroller.cpp)
 
 add_dependencies(${PROJECT_NAME}_localization
     ${catkin_EXPORTED_TARGETS})
@@ -180,6 +183,7 @@ target_link_libraries(${PROJECT_NAME}_exploration_node
     ${PROJECT_NAME}_exploration ${catkin_LIBRARIES})
 target_link_libraries(${PROJECT_NAME}_exploration_client
     ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}_patroller ${catkin_LIBRARIES})
 ## target_link_libraries(localization_client ${catkin_LIBRARIES})
 
 
