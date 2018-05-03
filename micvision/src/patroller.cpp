@@ -27,6 +27,16 @@ MicvisionPatroller::~MicvisionPatroller() {
   marker_array_.markers.clear();
 }
 
+void MicvisionPatroller::publishMarkerArray() {
+  ros::Rate rate(10);
+
+  while ( ros::ok() && true ) {
+    marker_pub_.publish(marker_array_);
+    rate.sleep();
+    ros::spinOnce();
+  }
+}
+
 void MicvisionPatroller::clickCallback(
     const geometry_msgs::PointStamped::ConstPtr &point) {
   const auto i = landmarks_.size();
@@ -83,7 +93,7 @@ void MicvisionPatroller::clickCallback(
   }
   marker_array_.markers.push_back(text);
 
-  marker_pub_.publish(marker_array_);
+  // marker_pub_.publish(marker_array_);
 }
 
 void MicvisionPatroller::publishGoal(const bool first_input) {
@@ -152,10 +162,9 @@ bool MicvisionPatroller::receiveResetCommand(
     std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &res) {
   patrolling_ = false;
   landmarks_.clear();
+
   marker_array_.markers.clear();
   current_index_ = 0;
-
-  marker_pub_.publish(marker_array_);
 
   res.success = true;
   res.message = "Reset patrol.";
@@ -170,6 +179,7 @@ int main(int argc, char **argv)
 
   micvision::MicvisionPatroller micvision_patroller;
 
+  micvision_patroller.publishMarkerArray();
 
   ros::spin();
   return 0;

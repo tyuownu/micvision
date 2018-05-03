@@ -18,6 +18,7 @@ class MicvisionPatroller {
  public:
   MicvisionPatroller();
   ~MicvisionPatroller();
+  void publishMarkerArray();
 
  private:
   void clickCallback(const geometry_msgs::PointStamped::ConstPtr &point);
@@ -33,6 +34,7 @@ class MicvisionPatroller {
 
   bool receiveResetCommand(std_srvs::Trigger::Request &req,
                            std_srvs::Trigger::Response &res);
+
 
 
  private:
