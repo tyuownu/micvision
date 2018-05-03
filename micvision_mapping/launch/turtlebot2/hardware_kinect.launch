@@ -1,0 +1,17 @@
+<launch>
+  <include file="$(find kobuki_node)/launch/minimal.launch" />
+  <include file="$(find micvision_mapping)/launch/turtlebot2/state_publisher.launch" />
+  <!-- start up kinect -->
+  <include file="$(find freenect_launch)/launch/freenect.launch" />
+
+  <!-- change depth image to scan -->
+  <node pkg="nodelet" type="nodelet" name="laserscan_nodelet_manager" args="manager"/>
+  <node pkg="nodelet" type="nodelet" name="depthimage_to_laserscan"
+      args="load depthimage_to_laserscan/DepthImageToLaserScanNodelet laserscan_nodelet_manager">
+      <param name="scan_height" value="10"/>
+      <param name="output_frame_id" value="camera_depth_frame"/>
+      <param name="range_min" value="0.45"/>
+      <remap from="image" to="/camera/depth/image_raw"/>
+      <remap from="scan" to="/scan"/>
+  </node>
+</launch>
