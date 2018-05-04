@@ -1,5 +1,7 @@
 <launch>
-  <include file="$(find micvision_mapping)/launch/turtlebot2/cartographer_turtlebot2.launch" />
-  <include file="$(find micvision_mapping)/launch/turtlebot2/hardware_kinect.launch" />
-  <include file="$(find micvision)/launch/exploration.launch" />
+  <include file="$(find micvision_mapping)/launch/turtlebot2/kinect_hardware.launch" />
+  <include file="$(find micvision_mapping)/launch/turtlebot2/kinect_cartographer.launch" />
+  <!--
+     -<include file="$(find micvision)/launch/exploration.launch" />
+     -->
 </launch>
