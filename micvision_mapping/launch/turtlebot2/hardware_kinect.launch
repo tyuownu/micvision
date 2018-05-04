@@ -1,6 +1,5 @@
 <launch>
   <include file="$(find kobuki_node)/launch/minimal.launch" />
-  <include file="$(find micvision_mapping)/launch/turtlebot2/state_publisher.launch" />
   <!-- start up kinect -->
   <include file="$(find freenect_launch)/launch/freenect.launch" />
 

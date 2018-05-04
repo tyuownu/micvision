@@ -1,9 +1,10 @@
 <launch>
   <master auto="start" />
+  <node pkg="tf" type="static_transform_publisher" name="base_footprint_camera_link" args="0 0 0 0 0 0 base_footprint camera_link 100" />
   <include file="$(find micvision_sim)/move_base_config/move_base_turtlebot2.xml" />
   <node name="cartographer_node" pkg="cartographer_ros" type="cartographer_node" args="
     -configuration_directory $(find cartographer_ros)/configuration_files
-    -configuration_basename turtlebot2_2d.lua " output="screen" ></node>
+    -configuration_basename kinect.lua " output="screen" ></node>
   <node name="flat_world_imu_node" pkg="cartographer_turtlebot"
       type="cartographer_flat_world_imu_node" output="screen">
     <remap from="imu_in" to="/mobile_base/sensors/imu_data_raw" />
