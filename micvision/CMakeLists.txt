@@ -101,7 +101,7 @@ generate_messages(
 
 ## Generate dynamic reconfigure parameters in the 'cfg' folder
 generate_dynamic_reconfigure_options(
-  cfg/localization.cfg
+  cfg/Localization.cfg
 )
 
 ###################################
@@ -223,6 +223,7 @@ install(TARGETS
     ${PROJECT_NAME}_exploration
     ${PROJECT_NAME}_exploration_node
     ${PROJECT_NAME}_exploration_client
+    ${PROJECT_NAME}_patroller
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -253,3 +254,5 @@ install(DIRECTORY include/${PROJECT_NAME}/
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+install(DIRECTORY launch
+    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})

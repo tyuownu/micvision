@@ -193,3 +193,5 @@ include_directories(
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+install(DIRECTORY launch rviz move_base_config stage_config
+    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
