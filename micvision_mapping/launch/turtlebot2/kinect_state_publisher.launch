@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+
+<launch>
+  <node pkg="tf" type="static_transform_publisher" name="base_footprint_base_link" args="0 0 0.01 0 0 0 base_footprint base_link 100"/>
+
+  <node pkg="tf" type="static_transform_publisher" name="base_link_camera_link" args="-0.087 -0.001 0.287 0 0 0 base_link camera_link 100"/>
+
+  <node pkg="tf" type="static_transform_publisher" name="base_link_gyro_link" args="0.056 0.062 0.02 0 0 0 base_link gyro_link 100" />
+
+</launch>
