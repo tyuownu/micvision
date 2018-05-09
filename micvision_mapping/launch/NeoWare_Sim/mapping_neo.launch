@@ -1,0 +1,4 @@
+<launch>
+  <include file="$(find micvision_mapping)/launch/NeoWare_Sim/cartographer_neo.launch" />
+  <include file="$(find nearest_frontier_planner)/launch/nearest_frontier_planner.launch" />
+</launch>

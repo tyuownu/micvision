@@ -1,0 +1,6 @@
+<launch>
+  <arg name="map_filename" default="$(find micvision_sim)/stage_config/maps/maze.yaml"/>
+  <include file="$(find micvision_navigation)/launch/NeoWare_Sim/move_base_amcl_neo.launch" >
+    <arg name="map_filename" value="$(arg map_filename)" />
+  </include>
+</launch>
