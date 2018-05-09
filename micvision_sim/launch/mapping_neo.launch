@@ -11,4 +11,5 @@
     <remap from="imu_in" to="/mobile_base/sensors/imu_data_raw" />
     <remap from="imu_out" to="/imu" />
   </node>
+  <include file="$(find micvision)/launch/exploration.launch" />
 </launch>
