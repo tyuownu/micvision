@@ -1,0 +1,14 @@
+<launch>
+  <master auto="start"/>
+  <param name="/use_sim_time" value="true"/>
+  <include file="$(find micvision_sim)/move_base_config/move_base_turtlebot2.xml"/>
+  <arg name="map_filename" default="$(find micvision_gazebo)/worlds/maps/maze.yaml"/>
+  <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_filename)" respawn="false" />
+  <include file="$(find micvision_gazebo)/launch/turtlebot_world.launch">
+      <arg name="world_file" value="$(find micvision_gazebo)/worlds/maze.world" />
+  </include>
+  <include file="$(find micvision_sim)/move_base_config/amcl.diff.xml"/>
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find micvision_sim)/rviz/navigation.rviz" />
+  <node name="micvision_localization_node" pkg="micvision" type="micvision_localization_node" output="screen"/>
+  <node name="micvision_patroller" pkg="micvision" type="micvision_patroller" output="screen"/>
+</launch>
