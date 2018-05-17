@@ -129,6 +129,10 @@ rosservice call /ResetPatroller
 
 __This package provides the real world & robot for mapping.__
 
+Click the link below to view a video showing mapping:
+[![The Robot automatically explore the whole lab](https://i.imgur.com/zx0yqQC.png)](https://youtu.be/MACHfxqYty0)
+
+
 You can use it with `turtlebot2(kobuki)` or `turtlebot3`.
 
 Usage:
@@ -145,7 +149,10 @@ roslaunch micvision_mapping mapping_turtlebot3.launch
 
 ## micvision_navigation
 
-__This package provide the real world and robot for navigation.__
+__This package provide the real world and robot for autonomous navigation and self-localization.__
+
+Click the link below to view a video showing self-localization and autonomous navigation:
+[![Robot self-localization and autonomous navigation in lab](https://i.imgur.com/L3BpiYe.png)](https://youtu.be/cGjrXOYjWjk)
 
 You can use it with `turtlebot2(kobuki)` or `turtlebot3`.
 
