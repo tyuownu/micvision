@@ -5,9 +5,14 @@
 -->
 <robot name="turtlebot" xmlns:xacro="http://ros.org/wiki/xacro">
 
-  <property name="MY_PI" value="3.1417" />
-  <property name="SONAR_HEIGHT" value="0.50" />
-  <property name="LIDAR_HEIGHT" value="0.40" />
+  <property name="PARENT_FRAME"  value="base_link" />
+  <property name="UPDATE_RATE"   value="10" />
+  <property name="MIN_RANGE"     value="0.01" />
+  <property name="MAX_RANGE"     value="1.50" />
+  <property name="MY_PI"         value="3.1416" />
+  <property name="RAY_COUNT"     value="3" />
+  <property name="SONAR_HEIGHT"  value="0.50" />
+  <property name="LIDAR_HEIGHT"  value="0.40" />
 
   <xacro:include filename="$(find micvision_gazebo)/urdf/turtlebot_library.urdf.xacro" />
 
@@ -25,56 +30,56 @@
   <!--TODO: Add compass-->
 
   <!-- Sonars -->
-  <xacro:sonar_sensor name="sonar_sensor_zero" parent="base_link" ros_topic="sonar_0" update_rate="10" min_range="0.01" max_range="2.55" field_of_view="${30*M_PI/180}" ray_count="3">
+  <xacro:sonar_sensor name="sonar_sensor_zero" parent="${PARENT_FRAME}" ros_topic="sonar_0" update_rate="${UPDATE_RATE}" min_range="${MIN_RANGE}" max_range="${MAX_RANGE}" field_of_view="${30*M_PI/180}" ray_count="${RAY_COUNT}">
     <origin xyz="-0.1780 0.0 ${SONAR_HEIGHT}" rpy="0 0 -3.1417"/>
   </xacro:sonar_sensor>
 
-  <xacro:sonar_sensor name="sonar_sensor_one" parent="base_link" ros_topic="sonar_1" update_rate="10" min_range="0.01" max_range="2.55" field_of_view="${30*M_PI/180}" ray_count="3">
+  <xacro:sonar_sensor name="sonar_sensor_one" parent="${PARENT_FRAME}" ros_topic="sonar_1" update_rate="${UPDATE_RATE}" min_range="${MIN_RANGE}" max_range="${MAX_RANGE}" field_of_view="${30*M_PI/180}" ray_count="${RAY_COUNT}">
     <origin xyz="-0.1542 -0.0890 ${SONAR_HEIGHT}" rpy="0 0 -2.6180"/>
   </xacro:sonar_sensor>
 
-  <xacro:sonar_sensor name="sonar_sensor_two" parent="base_link" ros_topic="sonar_2" update_rate="10" min_range="0.01" max_range="2.55" field_of_view="${30*M_PI/180}" ray_count="3">
+  <xacro:sonar_sensor name="sonar_sensor_two" parent="${PARENT_FRAME}" ros_topic="sonar_2" update_rate="${UPDATE_RATE}" min_range="${MIN_RANGE}" max_range="${MAX_RANGE}" field_of_view="${30*M_PI/180}" ray_count="${RAY_COUNT}">
     <origin xyz="-0.0890 -0.1542 ${SONAR_HEIGHT}" rpy="0 0 -2.0944"/>
   </xacro:sonar_sensor>
 
-  <xacro:sonar_sensor name="sonar_sensor_three" parent="base_link" ros_topic="sonar_3" update_rate="10" min_range="0.01" max_range="2.55" field_of_view="${30*M_PI/180}" ray_count="3">
+  <xacro:sonar_sensor name="sonar_sensor_three" parent="${PARENT_FRAME}" ros_topic="sonar_3" update_rate="${UPDATE_RATE}" min_range="${MIN_RANGE}" max_range="${MAX_RANGE}" field_of_view="${30*M_PI/180}" ray_count="${RAY_COUNT}">
     <origin xyz="0.0 -0.1780 ${SONAR_HEIGHT}" rpy="0 0 -1.5708"/>
   </xacro:sonar_sensor>
 
-  <xacro:sonar_sensor name="sonar_sensor_four" parent="base_link" ros_topic="sonar_4" update_rate="10" min_range="0.01" max_range="2.55" field_of_view="${30*M_PI/180}" ray_count="3">
+  <xacro:sonar_sensor name="sonar_sensor_four" parent="${PARENT_FRAME}" ros_topic="sonar_4" update_rate="${UPDATE_RATE}" min_range="${MIN_RANGE}" max_range="${MAX_RANGE}" field_of_view="${30*M_PI/180}" ray_count="${RAY_COUNT}">
     <origin xyz="0.0890 -0.1542 ${SONAR_HEIGHT}" rpy="0 0 -1.0472"/>
   </xacro:sonar_sensor>
 
-  <xacro:sonar_sensor name="sonar_sensor_five" parent="base_link" ros_topic="sonar_5" update_rate="10" min_range="0.01" max_range="2.55" field_of_view="${30*M_PI/180}" ray_count="3">
+  <xacro:sonar_sensor name="sonar_sensor_five" parent="${PARENT_FRAME}" ros_topic="sonar_5" update_rate="${UPDATE_RATE}" min_range="${MIN_RANGE}" max_range="${MAX_RANGE}" field_of_view="${30*M_PI/180}" ray_count="${RAY_COUNT}">
     <origin xyz="0.1542 -0.0890 ${SONAR_HEIGHT}" rpy="0 0 -0.5236"/>
   </xacro:sonar_sensor>
 
-  <xacro:sonar_sensor name="sonar_sensor_six" parent="base_link" ros_topic="sonar_6" update_rate="10" min_range="0.01" max_range="2.55" field_of_view="${30*M_PI/180}" ray_count="3">
+  <xacro:sonar_sensor name="sonar_sensor_six" parent="${PARENT_FRAME}" ros_topic="sonar_6" update_rate="${UPDATE_RATE}" min_range="${MIN_RANGE}" max_range="${MAX_RANGE}" field_of_view="${30*M_PI/180}" ray_count="${RAY_COUNT}">
     <origin xyz="0.1780 0.0 ${SONAR_HEIGHT}" rpy="0 0 0.000"/>
   </xacro:sonar_sensor>
 
-  <xacro:sonar_sensor name="sonar_sensor_seven" parent="base_link" ros_topic="sonar_7" update_rate="10" min_range="0.01" max_range="2.55" field_of_view="${30*M_PI/180}" ray_count="3">
+  <xacro:sonar_sensor name="sonar_sensor_seven" parent="${PARENT_FRAME}" ros_topic="sonar_7" update_rate="${UPDATE_RATE}" min_range="${MIN_RANGE}" max_range="${MAX_RANGE}" field_of_view="${30*M_PI/180}" ray_count="${RAY_COUNT}">
     <origin xyz="0.1542 0.0890 ${SONAR_HEIGHT}" rpy="0 0 0.5236"/>
   </xacro:sonar_sensor>
 
-  <xacro:sonar_sensor name="sonar_sensor_eight" parent="base_link" ros_topic="sonar_8" update_rate="10" min_range="0.01" max_range="2.55" field_of_view="${30*M_PI/180}" ray_count="3">
+  <xacro:sonar_sensor name="sonar_sensor_eight" parent="${PARENT_FRAME}" ros_topic="sonar_8" update_rate="${UPDATE_RATE}" min_range="${MIN_RANGE}" max_range="${MAX_RANGE}" field_of_view="${30*M_PI/180}" ray_count="${RAY_COUNT}">
     <origin xyz="0.0890 0.1542 ${SONAR_HEIGHT}" rpy="0 0 1.0472"/>
   </xacro:sonar_sensor>
 
-  <xacro:sonar_sensor name="sonar_sensor_nine" parent="base_link" ros_topic="sonar_9" update_rate="10" min_range="0.01" max_range="2.55" field_of_view="${30*M_PI/180}" ray_count="3">
+  <xacro:sonar_sensor name="sonar_sensor_nine" parent="${PARENT_FRAME}" ros_topic="sonar_9" update_rate="${UPDATE_RATE}" min_range="${MIN_RANGE}" max_range="${MAX_RANGE}" field_of_view="${30*M_PI/180}" ray_count="${RAY_COUNT}">
     <origin xyz="0.0000 0.1780 ${SONAR_HEIGHT}" rpy="0 0 1.5708"/>
   </xacro:sonar_sensor>
 
-  <xacro:sonar_sensor name="sonar_sensor_ten" parent="base_link" ros_topic="sonar_10" update_rate="10" min_range="0.01" max_range="2.55" field_of_view="${30*M_PI/180}" ray_count="3">
+  <xacro:sonar_sensor name="sonar_sensor_ten" parent="${PARENT_FRAME}" ros_topic="sonar_10" update_rate="${UPDATE_RATE}" min_range="${MIN_RANGE}" max_range="${MAX_RANGE}" field_of_view="${30*M_PI/180}" ray_count="${RAY_COUNT}">
     <origin xyz="-0.0890 0.1542 ${SONAR_HEIGHT}" rpy="0 0 2.0944"/>
   </xacro:sonar_sensor>
 
-  <xacro:sonar_sensor name="sonar_sensor_eleven" parent="base_link" ros_topic="sonar_11" update_rate="10" min_range="0.01" max_range="2.55" field_of_view="${30*M_PI/180}" ray_count="3">
+  <xacro:sonar_sensor name="sonar_sensor_eleven" parent="${PARENT_FRAME}" ros_topic="sonar_11" update_rate="${UPDATE_RATE}" min_range="${MIN_RANGE}" max_range="${MAX_RANGE}" field_of_view="${30*M_PI/180}" ray_count="${RAY_COUNT}">
     <origin xyz="-0.1542 0.0890 ${SONAR_HEIGHT}" rpy="0 0 2.6180"/>
   </xacro:sonar_sensor>
 
   <!-- rplidar -->
-  <xacro:rplidar name="rplidar_laser" parent="base_link" ros_topic="scan" update_rate="10" ray_count="360" min_angle="-180" max_angle="180" >
+  <xacro:rplidar name="rplidar_laser" parent="${PARENT_FRAME}" ros_topic="scan" update_rate="${UPDATE_RATE}" ray_count="360" min_angle="-180" max_angle="180" >
       <origin xyz="0.0 0.0 ${LIDAR_HEIGHT}" rpy="0 0 0"/>
   </xacro:rplidar>
 
