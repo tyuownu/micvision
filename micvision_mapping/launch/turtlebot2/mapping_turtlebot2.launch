@@ -1,5 +1,8 @@
 <launch>
-  <include file="$(find micvision_mapping)/launch/turtlebot2/cartographer_turtlebot2.launch" />
+  <arg name="sonar"         default="$(env SONAR_USE)" />
+  <include file="$(find micvision_mapping)/launch/turtlebot2/cartographer_turtlebot2.launch" >
+      <arg name="is_sonar"    value="$(arg sonar)" />
+  </include>
   <include file="$(find micvision_mapping)/launch/turtlebot2/hardware_turtlebot2.launch" />
   <include file="$(find micvision)/launch/exploration.launch" />
 </launch>
