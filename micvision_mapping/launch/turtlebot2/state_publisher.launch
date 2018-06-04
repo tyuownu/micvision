@@ -13,19 +13,29 @@
 
   <node pkg="tf" type="static_transform_publisher" name="base_link_laser_frame" args="0 0 0.1 0 0 0 base_link laser_frame 100" />
 
-  <node pkg="tf" type="static_transform_publisher" name="base_link_sonar_0" args="0.11   0      0.1 0      0 0 base_link range_front 50" />
+<!--
+   -  <node pkg="tf" type="static_transform_publisher" name="base_link_sonar_0" args="0.11   0      0.1 0      0 0 base_link range_front 50" />
+   -
+   -  <node pkg="tf" type="static_transform_publisher" name="base_link_sonar_1" args="0.078  0.078  0.1 0.785  0 0 base_link range_lfront 50" />
+   -
+   -  <node pkg="tf" type="static_transform_publisher" name="base_link_sonar_2" args="0.0    0.11   0.1 1.571  0 0 base_link range_left 50" />
+   -
+   -  <node pkg="tf" type="static_transform_publisher" name="base_link_sonar_3" args="-0.078 0.078  0.1 2.356  0 0 base_link range_lback 50" />
+   -
+   -  <node pkg="tf" type="static_transform_publisher" name="base_link_sonar_4" args="-0.11  0      0.1 3.142  0 0 base_link range_back 50" />
+   -
+   -  <node pkg="tf" type="static_transform_publisher" name="base_link_sonar_5" args="-0.078 -0.078 0.1 -2.356 0 0 base_link range_rback 50" />
+   -
+   -  <node pkg="tf" type="static_transform_publisher" name="base_link_sonar_6" args="0      -0.11  0.1 -1.571 0 0 base_link range_right 50" />
+   -
+   -  <node pkg="tf" type="static_transform_publisher" name="base_link_sonar_7" args="0.078  -0.078 0.1 -0.785 0 0 base_link range_rfront 50" />
+   -->
 
-  <node pkg="tf" type="static_transform_publisher" name="base_link_sonar_1" args="0.078  0.078  0.1 0.785  0 0 base_link range_lfront 50" />
+     <node pkg="tf" type="static_transform_publisher" name="base_link_sonar_0" args="0.11   0      0.1 0      0 0 base_link sonar0 50" />
 
-  <node pkg="tf" type="static_transform_publisher" name="base_link_sonar_2" args="0.0    0.11   0.1 1.571  0 0 base_link range_left 50" />
+     <node pkg="tf" type="static_transform_publisher" name="base_link_sonar_1" args="0.0    -0.11  0.1 -1.571 0 0 base_link sonar1 50" />
 
-  <node pkg="tf" type="static_transform_publisher" name="base_link_sonar_3" args="-0.078 0.078  0.1 2.356  0 0 base_link range_lback 50" />
+     <node pkg="tf" type="static_transform_publisher" name="base_link_sonar_2" args="-0.11  0.0    0.1 3.142  0 0 base_link sonar2 50" />
 
-  <node pkg="tf" type="static_transform_publisher" name="base_link_sonar_4" args="-0.11  0      0.1 3.142  0 0 base_link range_back 50" />
-
-  <node pkg="tf" type="static_transform_publisher" name="base_link_sonar_5" args="-0.078 -0.078 0.1 -2.356 0 0 base_link range_rback 50" />
-
-  <node pkg="tf" type="static_transform_publisher" name="base_link_sonar_6" args="0      -0.11  0.1 -1.571 0 0 base_link range_right 50" />
-
-  <node pkg="tf" type="static_transform_publisher" name="base_link_sonar_7" args="0.078  -0.078 0.1 -0.785 0 0 base_link range_rfront 50" />
+     <node pkg="tf" type="static_transform_publisher" name="base_link_sonar_3" args="0.0    0.11   0.1 1.571  0 0 base_link sonar3 50" />
 </launch>

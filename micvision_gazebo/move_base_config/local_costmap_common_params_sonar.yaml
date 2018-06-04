@@ -50,7 +50,7 @@ inflation_layer:
     inflation_radius: 0.30
 
 sonar_layer:
-    topics: ['/sonar_0', '/sonar_1', '/sonar_2', '/sonar_3', '/sonar_4', '/sonar_5', '/sonar_6', '/sonar_7']
+    topics: ['/sound_wave0', '/sound_wave1', '/sound_wave2', '/sound_wave3', '/sonar_4', '/sonar_5', '/sonar_6', '/sonar_7']
     clear_on_max_reading: true
 
 static_layer:

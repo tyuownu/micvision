@@ -2,4 +2,5 @@
   <include file="$(find kobuki_node)/launch/minimal.launch" />
   <include file="$(find rplidar_ros)/launch/rplidar.launch" />
   <include file="$(find micvision_mapping)/launch/turtlebot2/state_publisher.launch" />
+  <node name="neo_bringup_node" pkg="neo_bringup" type="neo_bringup_node" />
 </launch>
