@@ -49,9 +49,9 @@ inflation_layer:
     cost_scaling_factor: 10.0
     inflation_radius: 0.30
 
-sonar_layer:
-    topics: ['/sonar_0', '/sonar_1', '/sonar_2', '/sonar_3', '/sonar_4', '/sonar_5', '/sonar_6', '/sonar_7', '/sonar_8', '/sonar_9', '/sonar_10', '/sonar_11']
-    clear_on_max_reading: true
+# sonar_layer:
+#     topics: ['/sonar_0', '/sonar_1', '/sonar_2', '/sonar_3', '/sonar_4', '/sonar_5', '/sonar_6', '/sonar_7', '/sonar_8', '/sonar_9', '/sonar_10', '/sonar_11']
+#     clear_on_max_reading: true
 
 static_layer:
     enabled: false

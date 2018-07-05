@@ -8,6 +8,9 @@ Panels:
         - /LaserScan1
         - /Grid1
         - /MarkerArray1
+        - /TF1
+        - /TF1/Frames1
+        - /MarkerArray2
       Splitter Ratio: 0.5
     Tree Height: 815
   - Class: rviz/Selection
@@ -235,30 +238,142 @@ Visualization Manager:
       Queue Size: 100
       Value: true
     - Class: rviz/TF
-      Enabled: false
+      Enabled: true
       Frame Timeout: 15
       Frames:
-        All Enabled: true
+        All Enabled: false
+        base_footprint:
+          Value: false
+        base_link:
+          Value: true
+        caster_back_link:
+          Value: false
+        caster_front_link:
+          Value: false
+        cliff_sensor_front_link:
+          Value: false
+        cliff_sensor_left_link:
+          Value: false
+        cliff_sensor_right_link:
+          Value: false
+        gyro_link:
+          Value: false
+        map:
+          Value: false
+        odom:
+          Value: false
+        plate_bottom_link:
+          Value: false
+        plate_middle_link:
+          Value: false
+        plate_top_link:
+          Value: false
+        pole_bottom_0_link:
+          Value: false
+        pole_bottom_1_link:
+          Value: false
+        pole_bottom_2_link:
+          Value: false
+        pole_bottom_3_link:
+          Value: false
+        pole_bottom_4_link:
+          Value: false
+        pole_bottom_5_link:
+          Value: false
+        pole_kinect_0_link:
+          Value: false
+        pole_kinect_1_link:
+          Value: false
+        pole_middle_0_link:
+          Value: false
+        pole_middle_1_link:
+          Value: false
+        pole_middle_2_link:
+          Value: false
+        pole_middle_3_link:
+          Value: false
+        pole_top_0_link:
+          Value: false
+        pole_top_1_link:
+          Value: false
+        pole_top_2_link:
+          Value: false
+        pole_top_3_link:
+          Value: false
+        rplidar_laser_frame:
+          Value: false
+        wheel_left_link:
+          Value: false
+        wheel_right_link:
+          Value: false
       Marker Scale: 1
       Name: TF
       Show Arrows: true
       Show Axes: true
       Show Names: true
       Tree:
-        {}
+        map:
+          odom:
+            base_footprint:
+              base_link:
+                caster_back_link:
+                  {}
+                caster_front_link:
+                  {}
+                cliff_sensor_front_link:
+                  {}
+                cliff_sensor_left_link:
+                  {}
+                cliff_sensor_right_link:
+                  {}
+                gyro_link:
+                  {}
+                plate_bottom_link:
+                  {}
+                plate_middle_link:
+                  {}
+                plate_top_link:
+                  {}
+                pole_bottom_0_link:
+                  {}
+                pole_bottom_1_link:
+                  {}
+                pole_bottom_2_link:
+                  {}
+                pole_bottom_3_link:
+                  {}
+                pole_bottom_4_link:
+                  {}
+                pole_bottom_5_link:
+                  {}
+                pole_kinect_0_link:
+                  {}
+                pole_kinect_1_link:
+                  {}
+                pole_middle_0_link:
+                  {}
+                pole_middle_1_link:
+                  {}
+                pole_middle_2_link:
+                  {}
+                pole_middle_3_link:
+                  {}
+                pole_top_0_link:
+                  {}
+                pole_top_1_link:
+                  {}
+                pole_top_2_link:
+                  {}
+                pole_top_3_link:
+                  {}
+                rplidar_laser_frame:
+                  {}
+                wheel_left_link:
+                  {}
+                wheel_right_link:
+                  {}
       Update Interval: 0
-      Value: false
-    - Class: Submaps
-      Enabled: false
-      Map frame: map
-      Name: Submaps
-      Submap query service: /submap_query
-      Submaps:
-        All Enabled: true
-      Topic: /submap_list
-      Tracking frame: base_link
-      Unreliable: false
-      Value: false
+      Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -296,126 +411,6 @@ Visualization Manager:
       Namespaces:
         {}
       Queue Size: 100
-      Value: true
-    - Alpha: 0.5
-      Buffer Length: 1
-      Class: rviz/Range
-      Color: 255; 255; 255
-      Enabled: true
-      Name: Range
-      Queue Size: 100
-      Topic: /sonar_0
-      Unreliable: false
-      Value: true
-    - Alpha: 0.5
-      Buffer Length: 1
-      Class: rviz/Range
-      Color: 255; 255; 255
-      Enabled: true
-      Name: Range
-      Queue Size: 100
-      Topic: /sonar_1
-      Unreliable: false
-      Value: true
-    - Alpha: 0.5
-      Buffer Length: 1
-      Class: rviz/Range
-      Color: 255; 255; 255
-      Enabled: true
-      Name: Range
-      Queue Size: 100
-      Topic: /sonar_2
-      Unreliable: false
-      Value: true
-    - Alpha: 0.5
-      Buffer Length: 1
-      Class: rviz/Range
-      Color: 255; 255; 255
-      Enabled: true
-      Name: Range
-      Queue Size: 100
-      Topic: /sonar_3
-      Unreliable: false
-      Value: true
-    - Alpha: 0.5
-      Buffer Length: 1
-      Class: rviz/Range
-      Color: 255; 255; 255
-      Enabled: true
-      Name: Range
-      Queue Size: 100
-      Topic: /sonar_4
-      Unreliable: false
-      Value: true
-    - Alpha: 0.5
-      Buffer Length: 1
-      Class: rviz/Range
-      Color: 255; 255; 255
-      Enabled: true
-      Name: Range
-      Queue Size: 100
-      Topic: /sonar_5
-      Unreliable: false
-      Value: true
-    - Alpha: 0.5
-      Buffer Length: 1
-      Class: rviz/Range
-      Color: 255; 255; 255
-      Enabled: true
-      Name: Range
-      Queue Size: 100
-      Topic: /sonar_6
-      Unreliable: false
-      Value: true
-    - Alpha: 0.5
-      Buffer Length: 1
-      Class: rviz/Range
-      Color: 255; 255; 255
-      Enabled: true
-      Name: Range
-      Queue Size: 100
-      Topic: /sonar_7
-      Unreliable: false
-      Value: true
-    - Alpha: 0.5
-      Buffer Length: 1
-      Class: rviz/Range
-      Color: 255; 255; 255
-      Enabled: true
-      Name: Range
-      Queue Size: 100
-      Topic: /sonar_8
-      Unreliable: false
-      Value: true
-    - Alpha: 0.5
-      Buffer Length: 1
-      Class: rviz/Range
-      Color: 255; 255; 255
-      Enabled: true
-      Name: Range
-      Queue Size: 100
-      Topic: /sonar_9
-      Unreliable: false
-      Value: true
-    - Alpha: 0.5
-      Buffer Length: 1
-      Class: rviz/Range
-      Color: 255; 255; 255
-      Enabled: true
-      Name: Range
-      Queue Size: 100
-      Topic: /sonar_10
-      Unreliable: false
-      Value: true
-    - Alpha: 0.5
-      Buffer Length: 1
-      Class: rviz/Range
-      Color: 255; 255; 255
-      Enabled: true
-      Name: Range
-      Queue Size: 100
-      Topic: /sonar_11
-      Unreliable: false
       Value: true
   Enabled: true
   Global Options:
