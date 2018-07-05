@@ -263,17 +263,6 @@ Visualization Manager:
                   {}
       Update Interval: 0
       Value: true
-    - Class: Submaps
-      Enabled: false
-      Map frame: map
-      Name: Submaps
-      Submap query service: /submap_query
-      Submaps:
-        All Enabled: true
-      Topic: /submap_list
-      Tracking frame: base_link
-      Unreliable: false
-      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
