@@ -162,15 +162,15 @@ add_executable(${PROJECT_NAME}_exploration_client
 ## add_executable(localization_client src/localization_client.cpp)
 add_executable(${PROJECT_NAME}_patroller src/patroller.cpp)
 
-add_dependencies(${PROJECT_NAME}_localization
+add_dependencies(${PROJECT_NAME}_localization ${PROJECT_NAME}_generate_messages_cpp
     ${catkin_EXPORTED_TARGETS})
-add_dependencies(${PROJECT_NAME}_localization_node
+add_dependencies(${PROJECT_NAME}_localization_node ${PROJECT_NAME}_generate_messages_cpp
     ${catkin_EXPORTED_TARGETS})
-add_dependencies(${PROJECT_NAME}_exploration
+add_dependencies(${PROJECT_NAME}_exploration ${PROJECT_NAME}_generate_messages_cpp
     ${catkin_EXPORTED_TARGETS})
-add_dependencies(${PROJECT_NAME}_exploration_node
+add_dependencies(${PROJECT_NAME}_exploration_node ${PROJECT_NAME}_generate_messages_cpp
     ${catkin_EXPORTED_TARGETS})
-add_dependencies(${PROJECT_NAME}_exploration_client
+add_dependencies(${PROJECT_NAME}_exploration_client ${PROJECT_NAME}_generate_messages_cpp
     ${catkin_EXPORTED_TARGETS})
 ## add_dependencies(localization_client ${catkin_EXPORTED_TARGETS})
 
