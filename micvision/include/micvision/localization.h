@@ -172,8 +172,12 @@ class MicvisionLocalization {
     tf::TransformListener tf_listener_;
     std::string map_frame_;
     std::string robot_frame_;
+    std::string laser_frame_;
     double tracking_frequency_;
     double current_position_score_ = 0.0f;
+
+    // laser transform
+    tf::StampedTransform laser_transform_;
 
     // odom relative
     bool big_angle_twist_ = false;
