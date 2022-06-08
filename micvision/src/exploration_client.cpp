@@ -12,8 +12,8 @@
 
 micvision::Client* explore_client;
 
-bool receiveCommand(std_srvs::Trigger::Request &req,
-    std_srvs::Trigger::Response &res) {
+bool receiveCommand(std_srvs::Trigger::Request& req,
+                    std_srvs::Trigger::Response& res) {
   /*
   geometry_msgs::Twist cmd_vel;
   ros::NodeHandle n;
@@ -40,8 +40,7 @@ bool receiveCommand(std_srvs::Trigger::Request &req,
   return true;
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char** argv) {
   ros::init(argc, argv, "micvision_exploration_client");
   ros::NodeHandle n;
 

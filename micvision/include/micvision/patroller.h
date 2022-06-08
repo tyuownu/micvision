@@ -21,21 +21,21 @@ class MicvisionPatroller {
   void publishMarkerArray();
 
  private:
-  void clickCallback(const geometry_msgs::PointStamped::ConstPtr &point);
+  void clickCallback(const geometry_msgs::PointStamped::ConstPtr& point);
   void publishGoal(const bool first_input);
   void positionFeedback(
-      const move_base_msgs::MoveBaseActionFeedback::ConstPtr &position);
+    const move_base_msgs::MoveBaseActionFeedback::ConstPtr& position);
 
-  bool receiveStartCommand(std_srvs::Trigger::Request &req,
-                           std_srvs::Trigger::Response &res);
+  bool receiveStartCommand(std_srvs::Trigger::Request& req,
+                           std_srvs::Trigger::Response& res);
 
-  bool receiveStopCommand(std_srvs::Trigger::Request &req,
-                          std_srvs::Trigger::Response &res);
+  bool receiveStopCommand(std_srvs::Trigger::Request& req,
+                          std_srvs::Trigger::Response& res);
 
-  bool receiveResetCommand(std_srvs::Trigger::Request &req,
-                           std_srvs::Trigger::Response &res);
+  bool receiveResetCommand(std_srvs::Trigger::Request& req,
+                           std_srvs::Trigger::Response& res);
 
-  void externGoalCallback(const geometry_msgs::PoseStamped &goal);
+  void externGoalCallback(const geometry_msgs::PoseStamped& goal);
 
 
 
@@ -56,9 +56,9 @@ class MicvisionPatroller {
   bool                                 patrolling_ = false;
 };
 
-double distance(const geometry_msgs::Point &p1,
-                const geometry_msgs::Point &p2) {
-  return sqrt((p1.x - p2.x)*(p1.x - p2.x) + (p1.y - p2.y)*(p1.y - p2.y));
+double distance(const geometry_msgs::Point& p1,
+                const geometry_msgs::Point& p2) {
+  return sqrt((p1.x - p2.x) * (p1.x - p2.x) + (p1.y - p2.y) * (p1.y - p2.y));
 }
 }  // namespace micvision
 

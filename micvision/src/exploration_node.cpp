@@ -2,8 +2,7 @@
 
 #include <micvision/exploration.h>
 
-int main(int argc, char **argv)
-{
+int main(int argc, char** argv) {
   ros::init(argc, argv, "micvision_exploration_node");
   ros::NodeHandle n;
 
