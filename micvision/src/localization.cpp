@@ -248,7 +248,7 @@ void MicvisionLocalization::scoreLaserScanSamples() {
           }
 
           score = sample_score;
-          best_angle_ = i * laserscan_anglar_step_ * RADIAN_PRE_DEGREE;
+          best_angle_ = i * laserscan_anglar_step_ * RADIAN_PRE_DEGREE - M_PI;
           best_position_ = Pixel(u, v);
         }
       }
