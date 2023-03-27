@@ -5,9 +5,9 @@ MicvisionPatroller::MicvisionPatroller() {
   ros::NodeHandle n;
 
   marker_pub_ =
-      n.advertise<visualization_msgs::MarkerArray>("landmarks", 10);
+    n.advertise<visualization_msgs::MarkerArray>("landmarks", 10);
   goal_pub_ =
-      n.advertise<move_base_msgs::MoveBaseActionGoal>("/move_base/goal", 10);
+    n.advertise<move_base_msgs::MoveBaseActionGoal>("/move_base/goal", 10);
 
   click_sub_ = n.subscribe("/clicked_point", 10,
                            &MicvisionPatroller::clickCallback, this);
@@ -17,11 +17,11 @@ MicvisionPatroller::MicvisionPatroller() {
                                  &MicvisionPatroller::externGoalCallback, this);
 
   cmd_start_server_ = n.advertiseService(
-      START_PATROLLER, &MicvisionPatroller::receiveStartCommand, this);
+                        START_PATROLLER, &MicvisionPatroller::receiveStartCommand, this);
   cmd_stop_server_ = n.advertiseService(
-      STOP_PATROLLER, &MicvisionPatroller::receiveStopCommand, this);
+                       STOP_PATROLLER, &MicvisionPatroller::receiveStopCommand, this);
   cmd_reset_server_ = n.advertiseService(
-      RESET_PATROLLER, &MicvisionPatroller::receiveResetCommand, this);
+                        RESET_PATROLLER, &MicvisionPatroller::receiveResetCommand, this);
 }
 
 MicvisionPatroller::~MicvisionPatroller() {
@@ -32,7 +32,7 @@ MicvisionPatroller::~MicvisionPatroller() {
 void MicvisionPatroller::publishMarkerArray() {
   ros::Rate rate(10);
 
-  while ( ros::ok() && true ) {
+  while (ros::ok() && true) {
     marker_pub_.publish(marker_array_);
     rate.sleep();
     ros::spinOnce();
@@ -40,12 +40,12 @@ void MicvisionPatroller::publishMarkerArray() {
 }
 
 void MicvisionPatroller::clickCallback(
-    const geometry_msgs::PointStamped::ConstPtr &point) {
+  const geometry_msgs::PointStamped::ConstPtr& point) {
   const auto i = landmarks_.size();
   geometry_msgs::Point p;
   p.x = point->point.x;
   p.y = point->point.y;
-  ROS_INFO_STREAM("Adding landmark #" << i+1 << " : ("
+  ROS_INFO_STREAM("Adding landmark #" << i + 1 << " : ("
                   << p.x << ", " << p.y << ");");
   landmarks_.push_back(p);
   visualization_msgs::Marker cylinder;
@@ -54,7 +54,7 @@ void MicvisionPatroller::clickCallback(
     cylinder.header.frame_id    = "/map";
     cylinder.header.stamp       = ros::Time::now();
     cylinder.ns                 = "cylinder";
-    cylinder.id                 = 2*i;
+    cylinder.id                 = 2 * i;
     cylinder.type               = visualization_msgs::Marker::CYLINDER;
     cylinder.action             = visualization_msgs::Marker::ADD;
     cylinder.pose.orientation.w = 1.0;
@@ -76,7 +76,7 @@ void MicvisionPatroller::clickCallback(
     text.header.frame_id    = "/map";
     text.header.stamp       = ros::Time::now();
     text.ns                 = "text";
-    text.id                 = 2*i + 1;
+    text.id                 = 2 * i + 1;
     text.type               = visualization_msgs::Marker::TEXT_VIEW_FACING;
     text.action             = visualization_msgs::Marker::ADD;
     text.pose.orientation.w = 1.0;
@@ -91,7 +91,7 @@ void MicvisionPatroller::clickCallback(
     text.pose.position.x    = landmarks_[i].x + 0.2;
     text.pose.position.y    = landmarks_[i].y + 0.2;
 
-    text.text               = boost::lexical_cast<std::string>(i+1);
+    text.text               = boost::lexical_cast<std::string>(i + 1);
   }
   marker_array_.markers.push_back(text);
 
@@ -99,10 +99,10 @@ void MicvisionPatroller::clickCallback(
 }
 
 void MicvisionPatroller::publishGoal(const bool first_input) {
-  if ( !first_input )
+  if (!first_input)
     current_index_++;
 
-  if ( current_index_ >= landmarks_.size() )
+  if (current_index_ >= landmarks_.size())
     current_index_ = 0;
 
   geometry_msgs::PoseStamped goal;
@@ -127,17 +127,17 @@ void MicvisionPatroller::publishGoal(const bool first_input) {
 
 
 void MicvisionPatroller::positionFeedback(
-    const move_base_msgs::MoveBaseActionFeedback::ConstPtr &position ) {
-  if ( !patrolling_ ) return;
-  if ( distance(position->feedback.base_position.pose.position,
-                landmarks_[current_index_]) < 0.3 ) {
+  const move_base_msgs::MoveBaseActionFeedback::ConstPtr& position) {
+  if (!patrolling_) return;
+  if (distance(position->feedback.base_position.pose.position,
+               landmarks_[current_index_]) < 0.3) {
     publishGoal(false);
   }
 }
 
 bool MicvisionPatroller::receiveStartCommand(
-    std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &res) {
-  if ( landmarks_.size() < 2 ) {
+  std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res) {
+  if (landmarks_.size() < 2) {
     ROS_ERROR("The landmarks number is less than 2,"
               " please entry more landmarks!");
     res.success = false;
@@ -153,7 +153,7 @@ bool MicvisionPatroller::receiveStartCommand(
 }
 
 bool MicvisionPatroller::receiveStopCommand(
-    std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &res) {
+  std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res) {
   patrolling_ = false;
   res.success = true;
   res.message = "Stop patrol.";
@@ -161,7 +161,7 @@ bool MicvisionPatroller::receiveStopCommand(
 }
 
 bool MicvisionPatroller::receiveResetCommand(
-    std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &res) {
+  std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res) {
   patrolling_ = false;
   landmarks_.clear();
 
@@ -173,13 +173,12 @@ bool MicvisionPatroller::receiveResetCommand(
   return true;
 }
 void MicvisionPatroller::externGoalCallback(
-    const geometry_msgs::PoseStamped &goal) {
+  const geometry_msgs::PoseStamped& goal) {
   patrolling_ = false;
 }
 }  // end namespace micvision
 
-int main(int argc, char **argv)
-{
+int main(int argc, char** argv) {
   ros::init(argc, argv, "micvision_patroller");
   ros::NodeHandle n;
 

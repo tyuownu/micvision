@@ -33,25 +33,25 @@ class GridMap {
   // Get the array index from the given x,y coordinates
   bool getIndex(const unsigned int x,
                 const unsigned int y,
-                unsigned int &i) const {
-    if ( x >= map_width_ || y >= map_height_ ) {
+                unsigned int& i) const {
+    if (x >= map_width_ || y >= map_height_) {
       return false;
     }
     i = y * map_width_ + x;
     return true;
   }
 
-  bool getIndex(const Pixel& pixel, unsigned int &i) const {
+  bool getIndex(const Pixel& pixel, unsigned int& i) const {
     const auto x = pixel(0);
     const auto y = pixel(1);
     return getIndex(x, y, i);
   }
 
   // Get the x,y coordinates from the given array index
-  bool getCoordinates(unsigned int &x,
-                      unsigned int &y,
+  bool getCoordinates(unsigned int& x,
+                      unsigned int& y,
                       const unsigned int i) const {
-    if ( i >= map_width_ * map_height_ ) {
+    if (i >= map_width_ * map_height_) {
       ROS_ERROR("getCoordinates() failed!");
       return false;
     }
@@ -61,24 +61,24 @@ class GridMap {
   }
 
   bool getCoordinates(Pixel& pixel, const unsigned int i) const {
-    if ( i >= map_width_ * map_height_ ) {
+    if (i >= map_width_ * map_height_) {
       ROS_ERROR("getCoordinates() failed!");
       return false;
     }
-    pixel = Pixel(i%map_width_, i/map_width_);
+    pixel = Pixel(i % map_width_, i / map_width_);
     return true;
   }
 
   // Index based methods
   signed char getData(unsigned int index) const {
-    if ( index < map_width_ * map_height_ )
+    if (index < map_width_ * map_height_)
       return occupancy_grid_.data[index];
     else
       return -1;
   }
 
   bool setData(unsigned int index, signed char value) {
-    if ( index >= map_width_ * map_height_ ) {
+    if (index >= map_width_ * map_height_) {
       return false;
     }
     occupancy_grid_.data[index] = value;
@@ -87,7 +87,7 @@ class GridMap {
 
   bool isFree(unsigned int index) const {
     signed char value = getData(index);
-    if ( value >= 0 && value < lethal_cost_ ) return true;
+    if (value >= 0 && value < lethal_cost_) return true;
     return false;
   }
 
@@ -95,14 +95,14 @@ class GridMap {
     int y = index / map_width_;
     int x = index % map_width_;
 
-    if ( getData(x-1, y-1) == -1 ) return true;
-    if ( getData(x-1, y  ) == -1 ) return true;
-    if ( getData(x-1, y+1) == -1 ) return true;
-    if ( getData(x  , y-1) == -1 ) return true;
-    if ( getData(x  , y+1) == -1 ) return true;
-    if ( getData(x+1, y-1) == -1 ) return true;
-    if ( getData(x+1, y  ) == -1 ) return true;
-    if ( getData(x+1, y+1) == -1 ) return true;
+    if (getData(x - 1, y - 1) == -1) return true;
+    if (getData(x - 1, y) == -1) return true;
+    if (getData(x - 1, y + 1) == -1) return true;
+    if (getData(x, y - 1) == -1) return true;
+    if (getData(x, y + 1) == -1) return true;
+    if (getData(x + 1, y - 1) == -1) return true;
+    if (getData(x + 1, y) == -1) return true;
+    if (getData(x + 1, y + 1) == -1) return true;
 
     return false;
   }
@@ -112,13 +112,13 @@ class GridMap {
                                              int offset = 1) const {
     std::vector<unsigned int> neighbors;
 
-    if ( offset < 0 ) offset *= -1;
+    if (offset < 0) offset *= -1;
     int y = index / map_width_;
     int x = index % map_width_;
 
-    for ( int i = -offset; i <= offset; i++ )
-      for ( int j = -offset; j <= offset; j++ )
-        if ( getIndex(x+i, y+j, index) && isFree(index) )
+    for (int i = -offset; i <= offset; i++)
+      for (int j = -offset; j <= offset; j++)
+        if (getIndex(x + i, y + j, index) && isFree(index))
           neighbors.push_back(index);
 
     return neighbors;
@@ -132,26 +132,26 @@ class GridMap {
     int y = index / map_width_;
     int x = index % map_width_;
     unsigned int i;
-    if ( getIndex(x-1, y,   i) ) neighbors.push_back(i);
-    if ( getIndex(x+1, y,   i) ) neighbors.push_back(i);
-    if ( getIndex(x,   y-1, i) ) neighbors.push_back(i);
-    if ( getIndex(x,   y+1, i) ) neighbors.push_back(i);
+    if (getIndex(x - 1, y,   i)) neighbors.push_back(i);
+    if (getIndex(x + 1, y,   i)) neighbors.push_back(i);
+    if (getIndex(x,   y - 1, i)) neighbors.push_back(i);
+    if (getIndex(x,   y + 1, i)) neighbors.push_back(i);
 
-    if ( diagonal ) {
-      if ( getIndex(x-1, y-1, i) ) neighbors.push_back(i);
-      if ( getIndex(x-1, y+1, i) ) neighbors.push_back(i);
-      if ( getIndex(x+1, y-1, i) ) neighbors.push_back(i);
-      if ( getIndex(x+1, y+1, i) ) neighbors.push_back(i);
+    if (diagonal) {
+      if (getIndex(x - 1, y - 1, i)) neighbors.push_back(i);
+      if (getIndex(x - 1, y + 1, i)) neighbors.push_back(i);
+      if (getIndex(x + 1, y - 1, i)) neighbors.push_back(i);
+      if (getIndex(x + 1, y + 1, i)) neighbors.push_back(i);
     }
     return neighbors;
   }
 
   // Coordinate based methods
   signed char getData(int x, int y) const {
-    if ( x < 0 ||x >= (int)map_width_ || y < 0 || y >= (int)map_height_ )
+    if (x < 0 || x >= (int)map_width_ || y < 0 || y >= (int)map_height_)
       return 100;
     else
-      return occupancy_grid_.data[y*map_width_ + x];
+      return occupancy_grid_.data[y * map_width_ + x];
   }
 
   signed char getData(const Pixel& pixel) const {
@@ -159,7 +159,7 @@ class GridMap {
   }
 
   signed char getRawData(int x, int y) const {
-    return occupancy_grid_.data[y*map_width_ + x];
+    return occupancy_grid_.data[y * map_width_ + x];
   }
 
   signed char getRawData(const Pixel& pixel) const {
@@ -167,10 +167,10 @@ class GridMap {
   }
 
   bool setData(int x, int y, signed char value) {
-    if ( x < 0 ||x >= (int)map_width_ || y < 0 || y >= (int)map_height_ ) {
+    if (x < 0 || x >= (int)map_width_ || y < 0 || y >= (int)map_height_) {
       return false;
     }
-    occupancy_grid_.data[y*map_width_ + x] = value;
+    occupancy_grid_.data[y * map_width_ + x] = value;
     return true;
   }
 
@@ -180,7 +180,7 @@ class GridMap {
 
   bool isFree(int x, int y) const {
     signed char value = getData(x, y);
-    if ( value >= 0 && value < lethal_cost_ ) return true;
+    if (value >= 0 && value < lethal_cost_) return true;
     return false;
   }
 

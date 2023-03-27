@@ -31,14 +31,14 @@ class MicvisionExploration {
   ~MicvisionExploration();
 
  private:
-  bool receiveStop(std_srvs::Trigger::Request &req,
-                   std_srvs::Trigger::Response &res);
-  bool receiveStopExploration(std_srvs::Trigger::Request &req,
-                              std_srvs::Trigger::Response &res);
-  bool receivePause(std_srvs::Trigger::Request &req,
-                    std_srvs::Trigger::Response &res);
+  bool receiveStop(std_srvs::Trigger::Request& req,
+                   std_srvs::Trigger::Response& res);
+  bool receiveStopExploration(std_srvs::Trigger::Request& req,
+                              std_srvs::Trigger::Response& res);
+  bool receivePause(std_srvs::Trigger::Request& req,
+                    std_srvs::Trigger::Response& res);
   void receiveExplorationGoal(
-      const micvision::ExplorationGoal::ConstPtr &goal);
+    const micvision::ExplorationGoal::ConstPtr& goal);
   void mapCallback(const nav_msgs::OccupancyGrid& global_map);
   void scanCallback(const sensor_msgs::LaserScan& scan);
   void externGoalCallback(const geometry_msgs::PoseStamped&);
@@ -73,7 +73,7 @@ class MicvisionExploration {
   unsigned int start_index_ = -1;
   double update_frequency_;
 
-  double angles_ = -2*M_PI;
+  double angles_ = -2 * M_PI;
 
   // Everything related to the global map and plan
   GridMap current_map_;
