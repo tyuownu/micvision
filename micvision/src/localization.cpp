@@ -3,6 +3,7 @@
 #include <tf/transform_listener.h>
 
 #include <string.h>
+#include <math.h>
 #include <mutex>
 
 namespace micvision {
@@ -102,10 +103,12 @@ MicvisionLocalization::MicvisionLocalization() {
   ros::NodeHandle nh_pravite("~/");
   nh_pravite.param("map_frame", map_frame_, std::string("map"));
   nh_pravite.param("robot_frame", robot_frame_, std::string("base_link"));
+  nh_pravite.param("laser_frame", laser_frame_, std::string("laser_link"));
   nh_pravite.param("tracking_frequency", tracking_frequency_, 1.0);
 
   map_frame_ = tf_listener_.resolve(map_frame_);
   robot_frame_ = tf_listener_.resolve(robot_frame_);
+  laser_frame_ = tf_listener_.resolve(laser_frame_);
 
   dynamic_srv_ = new LocalizationConfigServer(ros::NodeHandle("~"));
   CallbackType cb = boost::bind(&MicvisionLocalization::reconfigureCB,
@@ -200,6 +203,7 @@ void MicvisionLocalization::scoreLaserScanSamples() {
   const int sample_size = laserscan_samples_[0].point_cloud.size();
   const int step = sample_size / quick_score_num_;
   // for ( int uv = 0; uv < inflated_map_data_.size(); ++uv )
+
   for (int v = 0; v < height_; v += range_step_) {
     for (int u = 0; u < width_; u += range_step_) {
       const int uv = v * width_ + u;
@@ -248,26 +252,38 @@ void MicvisionLocalization::scoreLaserScanSamples() {
           }
 
           score = sample_score;
-          best_angle_ = i * laserscan_anglar_step_ * RADIAN_PRE_DEGREE - M_PI;
+          best_angle_ = -M_PI + i * laserscan_anglar_step_ * RADIAN_PRE_DEGREE;
           best_position_ = Pixel(u, v);
         }
       }
     }
   }
 
+  try {
+    ros::Time now = ros::Time::now();
+    tf_listener_.lookupTransform(laser_frame_, robot_frame_, now, laser_transform_);
+  } catch ( tf::TransformException ex ) {
+    ROS_ERROR("Could not get robot position: %s", ex.what());
+  }
+
   geometry_msgs::PoseWithCovarianceStamped init_pose;
-  const double x = best_position_[0] * resolution_ + current_map_.getOriginX();
-  const double y = best_position_[1] * resolution_ + current_map_.getOriginY();
+  const double x_laser = best_position_[0]*resolution_ + current_map_.getOriginX();
+  const double y_laser = best_position_[1]*resolution_ + current_map_.getOriginY();
+  const double theta_laser = best_angle_;
+
+  const double x_robot = x_laser + (laser_transform_.getOrigin().x() * cos(theta_laser) - laser_transform_.getOrigin().y() * sin(theta_laser));
+  const double y_robot = y_laser + (laser_transform_.getOrigin().x() * sin(theta_laser) + laser_transform_.getOrigin().y() * cos(theta_laser));
+  const double theta_robot = theta_laser + getYaw(laser_transform_.getRotation());
 
   init_pose.header.stamp = ros::Time::now();
   init_pose.header.frame_id = "map";
 
-  init_pose.pose.pose.position.x = x;
-  init_pose.pose.pose.position.y = y;
+  init_pose.pose.pose.position.x = x_robot;
+  init_pose.pose.pose.position.y = y_robot;
   init_pose.pose.pose.position.z = 0;
 
   init_pose.pose.pose.orientation =
-    tf::createQuaternionMsgFromYaw(best_angle_);
+    tf::createQuaternionMsgFromYaw(theta_robot);
   init_pose.pose.covariance = {0.25, 0.0, 0.0, 0.0, 0.0, 0.0,
                                0.0, 0.25, 0.0, 0.0, 0.0, 0.0,
                                0.0,  0.0, 0.0, 0.0, 0.0, 0.0,
@@ -280,7 +296,7 @@ void MicvisionLocalization::scoreLaserScanSamples() {
 
 
   ROS_INFO("Best score: %f, angle: %f, Best position: %f, %f, count: %d",
-           score, best_angle_ / RADIAN_PRE_DEGREE, x, y, count);
+           score, theta_robot/RADIAN_PRE_DEGREE, x_robot, y_robot, count);
 }
 
 bool MicvisionLocalization::validPosition(const int uv, const int index) {
